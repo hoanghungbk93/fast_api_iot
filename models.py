@@ -19,6 +19,14 @@ class User(Base):
     role = Column(Enum(RoleEnum), default=RoleEnum.user)
     otps = relationship("OTP", back_populates="user")
 
+class GPSData(Base):
+    __tablename__ = "gps_data"
+
+    id = Column(Integer, primary_key=True, index=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
 class OTP(Base):
     __tablename__ = "otps"
 
@@ -28,11 +36,3 @@ class OTP(Base):
     expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(seconds=30))
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship("User", back_populates="otps")
-
-class GPSData(Base):
-    __tablename__ = "gps_data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
