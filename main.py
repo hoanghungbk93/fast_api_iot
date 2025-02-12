@@ -24,7 +24,7 @@ app.include_router(gps.router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Update with your frontend URL
+    allow_origins=["http://localhost:3000", "http://103.176.179.183:3001"],  # Update with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

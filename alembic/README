@@ -4,3 +4,6 @@ Generic single-database configuration.
 ✅ Dùng Alembic để cập nhật bảng khi model thay đổi mà không mất dữ liệu.
 ✅ Chạy alembic revision --autogenerate -m "update model" mỗi khi sửa model. Chưa db thì nó tự tạo db mới.
 ✅ Chạy alembic upgrade head để cập nhật database.
+
+PYTHONPATH=$(pwd) python -m alembic revision --autogenerate -m "update model"
+PYTHONPATH=$(pwd) python -m alembic upgrade head
