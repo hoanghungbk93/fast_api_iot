@@ -40,6 +40,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def read_sender():
     return FileResponse("static/views/sender.html")
+
+@app.get("/test")
+async def test():
+    return FileResponse("static/views/websocket_test.html")
+
+@app.get("/index")
+async def index():
+    return FileResponse("static/views/index.html")
+
+@app.get("/pairs_history")
+async def pairs_history():
+    return FileResponse("static/views/pairs.html")
+
 # Đăng ký router
 app.include_router(ro_users.router)
 app.include_router(ro_gps.router)

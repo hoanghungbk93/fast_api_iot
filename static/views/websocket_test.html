@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="log"></div>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+
+        function log(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        const socket = io('http://localhost:8000');
+
+        socket.on('connect', function() {
+            log('WebSocket connection opened');
+        });
+
+        socket.on('message', function(data) {
+            log('Message received: ' + data);
+        });
+
+        socket.on('disconnect', function() {
+            log('WebSocket connection closed');
+        });
+
+        socket.on('error', function(error) {
+            log('WebSocket error: ' + error);
+        });
+    </script>
+</body>
+</html> 
