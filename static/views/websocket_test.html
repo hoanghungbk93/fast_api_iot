@@ -30,7 +30,10 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        const socket = io('http://localhost:8000');
+        // Dynamically get the server IP and port
+        const host = window.location.hostname;
+        const port = window.location.port || 8000; // Default to 8000 if no port is specified
+        const socket = io(`http://${host}:${port}`);
 
         socket.on('connect', function() {
             log('WebSocket connection opened');
