@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_TYPE = os.getenv("DATABASE_TYPE")
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")  
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 
 if DATABASE_TYPE == "sqlite":
     SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH")

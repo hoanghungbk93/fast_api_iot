@@ -8,9 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 from app.sockets.socket_manager import sio, setup_socket_events
 from fastapi.responses import FileResponse
+from app.config.config import LOGFIRE_TOKEN, SENTRY_DSN
+
 # Initialize Sentry
 sentry_sdk.init(
-    dsn="https://c1f9de5250642b93751d7e743444768f@o4508243862028288.ingest.de.sentry.io/4508799409061968",
+    dsn=SENTRY_DSN,
     traces_sample_rate=1.0
 )
 
@@ -18,7 +20,7 @@ app = FastAPI()
 
 # Add Sentry middleware
 app.add_middleware(SentryAsgiMiddleware)
-logfire.configure(token='M3KR7WQ74BWYR26Xbtf7LqCNX8MgNGsdKwsgmPpGLqTj')
+logfire.configure(token=LOGFIRE_TOKEN)
 logfire.instrument_fastapi(app, capture_headers=True)
 
 # CORS Middleware (giữ nguyên)
