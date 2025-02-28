@@ -1,7 +1,7 @@
-from auth_methods.base_auth import BaseAuth
-from auth import verify_password, create_access_token
+from app.services.auth_methods.base_auth import BaseAuth
+from app.services.auth_methods.auth import verify_password, create_access_token
 from sqlalchemy.orm import Session
-from models import User
+from app.models.md_users import User
 
 class PasswordAuth(BaseAuth):
     def authenticate(self, username: str, password: str, db: Session):

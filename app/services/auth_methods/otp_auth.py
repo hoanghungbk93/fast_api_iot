@@ -1,6 +1,6 @@
-from auth_methods.base_auth import BaseAuth
+from app.services.auth_methods.base_auth import BaseAuth
 from sqlalchemy.orm import Session
-from models import OTP
+from app.models.md_users import OTP
 import random
 from datetime import datetime, timedelta, timezone
 

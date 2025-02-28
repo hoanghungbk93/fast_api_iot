@@ -1,4 +1,4 @@
-from auth_methods.base_auth import BaseAuth
+from app.services.auth_methods.base_auth import BaseAuth
 
 class GoogleAuth(BaseAuth):
     def authenticate(self, token: str):

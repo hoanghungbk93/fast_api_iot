@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from models import GPSData
-from schemas import GPSDataSchema
+from app.config.database import get_db
+from app.models.md_gps import GPSData
+from app.schemas.sch_gps import GPSDataSchema
 from pydantic import BaseModel
 import random
 

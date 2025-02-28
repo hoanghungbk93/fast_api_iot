@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from database import get_db
-from models import User
-from schemas import UserCreate, UserLogin, Token, OTPLogin, OTPGenerateRequest
-from auth import hash_password, verify_password, create_access_token
+from app.config.database import get_db
+from app.models.md_users import User
+from app.schemas.sch_users import UserCreate, UserLogin, Token, OTPLogin, OTPGenerateRequest
+from app.services.auth_methods.auth import hash_password, verify_password, create_access_token
 from datetime import timedelta
-from auth_manager import AuthManager
+from app.services.auth_methods.auth_manager import AuthManager
 from fastapi.responses import RedirectResponse
 import logging
 

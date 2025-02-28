@@ -14,7 +14,7 @@ lat_step = (end_location["latitude"] - start_location["latitude"]) / steps
 lon_step = (end_location["longitude"] - start_location["longitude"]) / steps
 
 # URL of the FastAPI endpoint
-url = "http://localhost:8000/gps/update"
+url = "http://fast.itmf.com.vn/gps/update"
 
 # Simulate the movement
 while True:

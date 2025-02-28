@@ -1,6 +1,6 @@
-from auth_methods.password_auth import PasswordAuth
-from auth_methods.google_auth import GoogleAuth
-from auth_methods.otp_auth import OTPAuth
+from app.services.auth_methods.password_auth import PasswordAuth
+from app.services.auth_methods.google_auth import GoogleAuth
+from app.services.auth_methods.otp_auth import OTPAuth
 
 class AuthManager:
     def __init__(self):
