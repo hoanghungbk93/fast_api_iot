@@ -56,7 +56,7 @@ MDNS_MCAST_MAC = "01:00:5e:00:00:fb"
 SSDP_MCAST_MAC = "01:00:5e:7f:ff:fa"
 
 # Cấu hình SQLAlchemy
-SQLALCHEMY_DATABASE_URL = "sqlite:///test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:////opt/fast_api_iot/test.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
