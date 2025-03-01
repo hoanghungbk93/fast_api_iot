@@ -35,13 +35,14 @@ def get_mac_address(ip):
 
 def get_ip_from_mac(mac_address):
     try:
-        result = subprocess.run(['arp-scan', '-l'], capture_output=True, text=True, check=True)
+        result = subprocess.run(['arp', '-n'], capture_output=True, text=True)
         for line in result.stdout.splitlines():
             if mac_address.lower() in line.lower():
                 return line.split()[0]
-    except subprocess.CalledProcessError as e:
-        print(f"Error running arp-scan: {e}")
-    return None
+        return None
+    except Exception as e:
+        logging.error(f"Error running arp -n: {e}")
+        return None
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s:%(message)s")
 
