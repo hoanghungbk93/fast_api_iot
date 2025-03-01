@@ -1,13 +1,12 @@
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from app.routers import ro_gps, ro_users, ro_pair, ro_chromecast
+from app.routers import ro_gps, ro_users, ro_pair, ro_chromecast, ro_ui
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 import logfire
 from fastapi.middleware.cors import CORSMiddleware
 import socketio
 from app.sockets.socket_manager import sio, setup_socket_events
-from fastapi.responses import FileResponse
 from app.config.config import LOGFIRE_TOKEN, SENTRY_DSN
 
 # Initialize Sentry
@@ -39,28 +38,12 @@ app.mount("/socket.io", sio_app)
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/")
-async def read_sender():
-    return FileResponse("static/views/sender.html")
-
-@app.get("/test")
-async def test():
-    return FileResponse("static/views/websocket_test.html")
-
-@app.get("/index")
-async def index():
-    return FileResponse("static/views/index.html")
-
-@app.get("/pairs_history")
-async def pairs_history():
-    return FileResponse("static/views/pairs.html")
-
 # Đăng ký router
 app.include_router(ro_users.router)
 app.include_router(ro_gps.router)
 app.include_router(ro_pair.router)
 app.include_router(ro_chromecast.router)
-
+app.include_router(ro_ui.router)
 # Setup Socket.IO events
 setup_socket_events()
 
