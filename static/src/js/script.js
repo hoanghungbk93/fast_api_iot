@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch and display chromecasts
     function fetchChromecasts() {
-        fetch('/chromecasts')
+        fetch('/chromecasts/chromecasts')
             .then(response => response.json())
             .then(chromecasts => {
                 chromecastList.innerHTML = '';
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const chromecastCode = document.getElementById('chromecast_code').value;
             const chromecastIp = document.getElementById('chromecast_ip').value;
 
-            fetch('/chromecasts', {
+            fetch('/chromecasts/chromecasts', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pairsTableBody = document.querySelector('#pairs-table tbody');
 
     function fetchPairs() {
-        fetch('/pairs')
+        fetch('/pair/list')
             .then(response => response.json())
             .then(pairs => {
                 pairsTableBody.innerHTML = '';
