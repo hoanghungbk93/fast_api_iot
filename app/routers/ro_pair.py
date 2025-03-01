@@ -101,24 +101,3 @@ async def disconnect(request: Request, db: Session = Depends(get_db)):
 async def list_pairs(db: Session = Depends(get_db)):
     pairs = db.query(Pair).all()
     return pairs
-
-@router.get("/device_count", response_model=int)
-async def get_device_count(request: Request, db: Session = Depends(get_db)):
-    """
-    Get the number of devices connected to a specific Chromecast using the client IP address.
-    """
-    # Get the client IP address from the request
-    chromecast_ip = request.client.host
-    chromecast_mac = get_mac_address(chromecast_ip)
-
-    # Retrieve the Chromecast using the IP address
-    chromecast = db.query(Chromecast).filter(Chromecast.mac_address == chromecast_mac).first()
-    
-    if not chromecast:
-        raise HTTPException(status_code=404, detail="Chromecast not found")
-
-    # Get the MAC address from the Chromecast
-    # Count the number of connected devices using the Chromecast ID
-    connections = db.query(Pair).filter(Pair.chromecast_id == chromecast.id).count()
-    
-    return connections
