@@ -12,13 +12,13 @@ class GPSDataRequest(BaseModel):
     latitude: float
     longitude: float
 
-@router.get("/")
-async def read_sender():
-    return FileResponse("static/views/sender.html")
+# @router.get("/")
+# async def read_sender():
+#     return FileResponse("static/views/sender.html")
 
-@router.get("/test")
-async def test():
-    return FileResponse("static/views/websocket_test.html")
+# @router.get("/test")
+# async def test():
+#     return FileResponse("static/views/websocket_test.html")
 
 @router.get("/index")
 async def index():

@@ -47,6 +47,14 @@ function getIpFromMac(mac) {
     return null;
 }
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'sender.html'));
+});
+
+app.get('/websocket_test', (req, res) => {
+    res.sendFile(path.join(__dirname, 'websocket_test.html'));
+});
+
 // API verify_code
 app.post('/verify_code', (req, res) => {
     const { code } = req.body;
