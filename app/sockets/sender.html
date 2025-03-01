@@ -153,7 +153,7 @@
             try {
                 showStatus('Connecting...', 'connecting');
                 
-                const response = await fetch(`/pair/verify_code`, {
+                const response = await fetch(`/verify_code`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -178,7 +178,7 @@
 
         async function disconnect() {
             try {
-                const response = await fetch(`/pair/disconnect`, {
+                const response = await fetch(`/disconnect`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
