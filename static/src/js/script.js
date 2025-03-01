@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 chromecastList.innerHTML = '';
                 chromecasts.forEach(chromecast => {
                     const li = document.createElement('li');
-                    li.textContent = `${chromecast[1]} (IP: ${chromecast[2]})`;
+                    li.textContent = `${chromecast.code} (IP: ${chromecast.mac_address})`;
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Delete';
                     deleteButton.onclick = () => deleteChromecast(chromecast[0]);
