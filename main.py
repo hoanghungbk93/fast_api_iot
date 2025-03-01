@@ -5,14 +5,8 @@ from app.routers import ro_gps, ro_users, ro_pair, ro_chromecast, ro_ui
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 import logfire
 from fastapi.middleware.cors import CORSMiddleware
-import socketio
-from app.sockets.socket_manager import sio, setup_socket_events
 from app.config.config import LOGFIRE_TOKEN, SENTRY_DSN
 import logging
-import eventlet
-
-# Monkey patch để dùng eventlet
-eventlet.monkey_patch()
 
 # Cấu hình logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
@@ -50,16 +44,11 @@ app.include_router(ro_pair.router)
 app.include_router(ro_chromecast.router)
 app.include_router(ro_ui.router)
 
-# Setup Socket.IO events
-setup_socket_events()
-
-# Tích hợp Socket.IO với FastAPI
-sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
-
 if __name__ == "__main__":
-    import eventlet.wsgi
+    import uvicorn
     local_ip = "0.0.0.0"
+    port = 8000
     logger.info(f"Handshake server running at:")
-    logger.info(f"http://{local_ip}:8000")
+    logger.info(f"http://{local_ip}:{port}")
     logger.info("Test code: 1234")
-    eventlet.wsgi.server(eventlet.listen((local_ip, 8000)), sio_app)
+    uvicorn.run(app, host=local_ip, port=port)
