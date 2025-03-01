@@ -9,6 +9,10 @@ import socketio
 from app.sockets.socket_manager import sio, setup_socket_events
 from app.config.config import LOGFIRE_TOKEN, SENTRY_DSN
 import logging
+import eventlet
+
+# Monkey patch để dùng eventlet
+eventlet.monkey_patch()
 
 # Cấu hình logger
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
@@ -50,12 +54,12 @@ app.include_router(ro_ui.router)
 setup_socket_events()
 
 # Tích hợp Socket.IO với FastAPI
-sio_app = socketio.ASGIApp(sio, other_asgi_app=app)  # Bọc FastAPI trong Socket.IO
+sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 if __name__ == "__main__":
-    import uvicorn
+    import eventlet.wsgi
     local_ip = "0.0.0.0"
     logger.info(f"Handshake server running at:")
     logger.info(f"http://{local_ip}:8000")
     logger.info("Test code: 1234")
-    uvicorn.run(sio_app, host=local_ip, port=8000)  # Chạy sio_app thay vì app
+    eventlet.wsgi.server(eventlet.listen((local_ip, 8000)), sio_app)
