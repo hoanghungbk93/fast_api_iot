@@ -3,13 +3,28 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const db = require('./db');
 const path = require('path');
+const winston = require('winston');
 
+// Cấu hình logger với winston
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.printf(({ timestamp, level, message }) => {
+            return `${timestamp} ${level.toUpperCase()}: ${message}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(), // Xuất log ra console
+        new winston.transports.File({ filename: 'server.log' }) // Lưu vào file
+    ]
+});
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: "*", // Cho phép tất cả origin
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
@@ -17,7 +32,17 @@ const io = new Server(httpServer, {
 // Middleware để parse JSON
 app.use(express.json());
 
-// Hàm getMacAddress (tương tự Python)
+// Middleware logging cho tất cả request
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        logger.info(`${req.method} ${req.url} - IP: ${req.ip} - Status: ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+});
+
+// Hàm getMacAddress
 function getMacAddress(ip) {
     try {
         const { execSync } = require('child_process');
@@ -28,12 +53,12 @@ function getMacAddress(ip) {
             }
         }
     } catch (e) {
-        console.error(`Error retrieving MAC for ${ip}:`, e);
+        logger.error(`Error retrieving MAC for ${ip}: ${e.message}`);
     }
     return "00:00:00:00:00:00";
 }
 
-// Hàm getIpFromMac (tương tự Python)
+// Hàm getIpFromMac
 function getIpFromMac(mac) {
     try {
         const { execSync } = require('child_process');
@@ -44,10 +69,18 @@ function getIpFromMac(mac) {
             }
         }
     } catch (e) {
-        console.error(`Error retrieving IP for ${mac}:`, e);
+        logger.error(`Error retrieving IP for ${mac}: ${e.message}`);
     }
     return null;
 }
+
+// Socket.IO events
+io.on('connection', (socket) => {
+    logger.info(`Socket.IO Client connected: ${socket.id}`);
+    socket.on('disconnect', () => {
+        logger.info(`Socket.IO Client disconnected: ${socket.id}`);
+    });
+});
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'sender.html'));
@@ -60,22 +93,23 @@ app.get('/websocket_test', (req, res) => {
 // API verify_code
 app.post('/verify_code', (req, res) => {
     const { code } = req.body;
-    const device_ip = req.ip.replace('::ffff:', ''); // Xử lý IPv6
+    const device_ip = req.ip.replace('::ffff:', '');
 
     if (!code) {
+        logger.warn(`No code provided from IP: ${device_ip}`);
         return res.status(400).json({ success: false, message: "No code provided" });
     }
 
     db.get('SELECT id, mac_address FROM chromecasts WHERE code = ?', [code], (err, chromecast) => {
         if (err) {
-            console.error('DB error:', err);
+            logger.error(`DB error on verify_code: ${err.message}`);
             return res.status(500).json({ success: false, message: "Server error" });
         }
 
         if (chromecast) {
             const { id: chromecast_id, mac_address: chromecast_mac } = chromecast;
             const chromecast_ip = getIpFromMac(chromecast_mac);
-            console.log(`Handshake successful - Device IP: ${device_ip}, Code: ${code}, Chromecast IP: ${chromecast_ip}`);
+            logger.info(`Handshake successful - Device IP: ${device_ip}, Code: ${code}, Chromecast IP: ${chromecast_ip}`);
 
             const mac_address = getMacAddress(device_ip);
             const pair_time = new Date().toISOString();
@@ -85,24 +119,25 @@ app.post('/verify_code', (req, res) => {
                 [chromecast_id, device_ip, mac_address, pair_time],
                 function(err) {
                     if (err) {
-                        console.error('Insert pair error:', err);
+                        logger.error(`Insert pair error: ${err.message}`);
                         return res.status(500).json({ success: false, message: "Server error" });
                     }
 
                     db.get('SELECT COUNT(*) as count FROM pairs WHERE chromecast_id = ?', [chromecast_id], (err, row) => {
                         if (err) {
-                            console.error('Count error:', err);
+                            logger.error(`Count error: ${err.message}`);
                             return res.status(500).json({ success: false, message: "Server error" });
                         }
 
                         const connections = row.count;
                         io.emit('connection_update', { chromecast_ip, connections });
+                        logger.info(`Emitted connection_update: chromecast_ip=${chromecast_ip}, connections=${connections}`);
                         res.json({ success: true, message: "Connected successfully" });
                     });
                 }
             );
         } else {
-            console.log(`Invalid code received from IP: ${device_ip}`);
+            logger.warn(`Invalid code received from IP: ${device_ip}`);
             res.status(400).json({ success: false, message: "Invalid code" });
         }
     });
@@ -114,7 +149,7 @@ app.post('/disconnect', (req, res) => {
 
     db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], (err, pair) => {
         if (err) {
-            console.error('DB error:', err);
+            logger.error(`DB error on disconnect: ${err.message}`);
             return res.status(500).json({ success: false, message: "Server error" });
         }
 
@@ -123,31 +158,33 @@ app.post('/disconnect', (req, res) => {
 
             db.run('DELETE FROM pairs WHERE ip_address = ?', [device_ip], (err) => {
                 if (err) {
-                    console.error('Delete pair error:', err);
+                    logger.error(`Delete pair error: ${err.message}`);
                     return res.status(500).json({ success: false, message: "Server error" });
                 }
 
                 db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
                     if (err) {
-                        console.error('Get chromecast error:', err);
+                        logger.error(`Get chromecast error: ${err.message}`);
                         return res.status(500).json({ success: false, message: "Server error" });
                     }
 
                     const chromecast_ip = chromecast ? getIpFromMac(chromecast.mac_address) : null;
                     db.get('SELECT COUNT(*) as count FROM pairs WHERE chromecast_id = ?', [chromecast_id], (err, row) => {
                         if (err) {
-                            console.error('Count error:', err);
+                            logger.error(`Count error: ${err.message}`);
                             return res.status(500).json({ success: false, message: "Server error" });
                         }
 
                         const connections = row.count;
-                        console.log(`Device disconnected: ${device_ip}`);
+                        logger.info(`Device disconnected: ${device_ip}`);
                         io.emit('connection_update', { chromecast_ip, connections });
+                        logger.info(`Emitted connection_update: chromecast_ip=${chromecast_ip}, connections=${connections}`);
                         res.json({ success: true, message: "Disconnected successfully" });
                     });
                 });
             });
         } else {
+            logger.warn(`Device not found for IP: ${device_ip}`);
             res.status(404).json({ success: false, message: "Device not found" });
         }
     });
@@ -156,5 +193,5 @@ app.post('/disconnect', (req, res) => {
 // Chạy server
 const PORT = 8001;
 httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${PORT}`);
+    logger.info(`Server running at http://0.0.0.0:${PORT}`);
 });
