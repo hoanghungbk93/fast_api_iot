@@ -1,12 +1,18 @@
 import socketio
+import logging
 
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
+# Cấu hình logger
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
+logger = logging.getLogger(__name__)
+
+# Khởi tạo Socket.IO server, không cần cors_allowed_origins vì FastAPI đã xử lý CORS
+sio = socketio.AsyncServer(async_mode='asgi')
 
 def setup_socket_events():
     @sio.event
     async def connect(sid, environ):
-        print(f"Client {sid} connected")
+        logger.info(f"Client {sid} connected")
 
     @sio.event
     async def disconnect(sid):
-        print(f"Client {sid} disconnected")
+        logger.info(f"Client {sid} disconnected")
