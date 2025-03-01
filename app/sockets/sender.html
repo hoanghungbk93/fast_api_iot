@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TV Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 24px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #1a1a1a;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        input {
+            width: 100%;
+            padding: 20px;
+            font-size: 32px;
+            font-weight: 500;
+            border: 2px solid #e1e3e6;
+            border-radius: 12px;
+            text-align: center;
+            letter-spacing: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #e1e3e6;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .error {
+            background-color: #F44336;
+            color: white;
+        }
+
+        .connected-state {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        #disconnectButton {
+            background-color: #f44336;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Connect to TV</h1>
+        
+        <!-- Connection Form -->
+        <div id="connectionForm">
+            <div class="input-group">
+                <input type="text" id="codeInput" placeholder="Enter code" maxlength="5" pattern="\d*" inputmode="numeric">
+            </div>
+            <button id="submitButton" disabled>Connect</button>
+        </div>
+
+        <!-- Connected State -->
+        <div id="connectedState" class="connected-state">
+            <div id="status"></div>
+            <button id="disconnectButton">Disconnect</button>
+        </div>
+    </div>
+
+    <script>
+        // const API_URL = 'http://10.3.0.2:8000';
+        const deviceId = 'device_' + Math.random().toString(36).substr(2, 9);  // Generate unique device ID
+        
+        const codeInput = document.getElementById('codeInput');
+        const submitButton = document.getElementById('submitButton');
+        const statusDiv = document.getElementById('status');
+        const connectionForm = document.getElementById('connectionForm');
+        const connectedState = document.getElementById('connectedState');
+        const disconnectButton = document.getElementById('disconnectButton');
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            statusDiv.style.display = 'block';
+        }
+
+        function showConnectedState() {
+            connectionForm.style.display = 'none';
+            connectedState.style.display = 'block';
+        }
+
+        function showConnectionForm() {
+            connectionForm.style.display = 'block';
+            connectedState.style.display = 'none';
+            codeInput.value = '';
+            codeInput.disabled = false;
+            submitButton.disabled = true;
+        }
+
+        async function sendCodeToServer(code) {
+            try {
+                showStatus('Connecting...', 'connecting');
+                
+                const response = await fetch(`/pair/verify_code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': deviceId
+                    },
+                    body: JSON.stringify({ code: code })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('Connected successfully!', 'success');
+                    showConnectedState();
+                } else {
+                    showStatus(data.message || 'Invalid code', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Connection failed. Please try again', 'error');
+            }
+        }
+
+        async function disconnect() {
+            try {
+                const response = await fetch(`/pair/disconnect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Device-ID': deviceId
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showConnectionForm();
+                    showStatus('Disconnected successfully', 'success');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Disconnect failed. Please try again', 'error');
+            }
+        }
+
+        // Event Listeners
+        codeInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            submitButton.disabled = this.value.length != 5;
+        });
+
+        submitButton.addEventListener('click', async function() {
+            const code = codeInput.value;
+            if (code.length >= 4) {
+                await sendCodeToServer(code);
+            }
+        });
+
+        codeInput.addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter' && this.value.length >= 5) {
+                await sendCodeToServer(this.value);
+            }
+        });
+
+        disconnectButton.addEventListener('click', disconnect);
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            disconnect();
+        });
+    </script>
+</body>
+</html>
