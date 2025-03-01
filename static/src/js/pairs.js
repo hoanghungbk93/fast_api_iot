@@ -9,11 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 pairs.forEach(pair => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${pair[0]}</td>
-                        <td>${pair[1]}</td>
-                        <td>${pair[2]}</td>
-                        <td>${pair[3]}</td>
-                        <td>${pair[4]}</td>
+                        <td>${pair.id}</td>
+                        <td>${pair.chromecast_id}</td>
+                        <td>${pair.ip_address}</td>
+                        <td>${pair.mac_address}</td>
+                        <td>${pair.pair_time}</td>
                     `;
                     pairsTableBody.appendChild(row);
                 });
