@@ -217,7 +217,7 @@ def handle_mdns_response(pkt, db: Session):
         logging.debug(f"[+] Nhận Response từ Chromecast {src_ip} → {dst_ip}")
         log_packet_details(pkt, "    ")
 
-        allowed_macs = db.query(Pair.phone_mac).filter(
+        allowed_macs = db.query(Pair.mac_address).filter(
             Pair.chromecast_id == chromecast.id
         ).distinct().all()
         unique_macs = [mac[0] for mac in allowed_macs if mac[0]]
@@ -251,7 +251,7 @@ def handle_ssdp_query(pkt, db: Session):
         logging.debug(f"[+] SSDP Query từ {src_ip} (MAC: {src_mac}) tới {dst_ip}: {payload}")
 
         if "M-SEARCH" in payload and "urn:dial-multiscreen-org:service:dial:1" in payload:
-            allowed_macs = db.query(Pair.phone_mac).distinct().all()
+            allowed_macs = db.query(Pair.mac_address).distinct().all()
             unique_macs = [mac[0] for mac in allowed_macs if mac[0]]
 
             if not unique_macs:
