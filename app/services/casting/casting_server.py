@@ -4,7 +4,7 @@ from threading import Thread
 import time
 from fastapi import FastAPI, Response, HTTPException, Request, Depends
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, DateTime
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 import socket
 import subprocess
