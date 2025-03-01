@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const db = require('./db');
 const path = require('path');
 const winston = require('winston');
+const cors = require('cors'); // Thêm cors
 
 // Cấu hình logger với winston
 const logger = winston.createLogger({
@@ -31,6 +32,12 @@ const io = new Server(httpServer, {
 
 // Middleware để parse JSON
 app.use(express.json());
+
+// Thêm middleware CORS cho tất cả route HTTP
+app.use(cors({
+    origin: "*", // Cho phép tất cả origin, bao gồm null
+    methods: ["GET", "POST"]
+}));
 
 // Middleware logging cho tất cả request
 app.use((req, res, next) => {
@@ -192,7 +199,7 @@ app.post('/disconnect', (req, res) => {
     });
 });
 
-// API device_info (mới)
+// API device_info
 app.get('/device_info', (req, res) => {
     const chromecast_ip = req.ip.replace('::ffff:', '');
 
