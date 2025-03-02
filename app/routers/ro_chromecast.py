@@ -25,7 +25,7 @@ def create_chromecast(chromecast: ChromecastCreate, db: Session = Depends(get_db
 
 @router.post("/checkout")
 async def checkout():
-    chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=["Living Room"])
+    chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=["101"])
     cast = chromecasts[0]
     cast.wait()
     
