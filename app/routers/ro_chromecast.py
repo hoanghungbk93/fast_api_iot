@@ -45,9 +45,12 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
 
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address) 
-    cast = pychromecast.Chromecast(chromecast_ip)
-    cast.wait()
+    casts = pychromecast.get_listed_chromecasts(known_hosts=[chromecast_ip])
+    if not casts:
+        raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
+    cast = casts[0]
+    cast.wait()
     # Ngắt ứng dụng hiện tại
     cast.quit_app()
 
