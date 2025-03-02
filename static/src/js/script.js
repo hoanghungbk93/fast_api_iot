@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Checkout function
     function checkout() {
-        fetch('/checkout', {
+        fetch('/chromecasts/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
