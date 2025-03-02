@@ -125,8 +125,8 @@ app.post('/verify_code', (req, res) => {
             const pair_time = new Date().toISOString().replace('Z', '');
 
             db.run(
-                'INSERT INTO pairs (chromecast_id, ip_address, mac_address, pair_time) VALUES (?, ?, ?, ?)',
-                [chromecast_id, device_ip, mac_address, pair_time],
+                'INSERT INTO pairs (chromecast_id, ip_address, mac_address, pair_time, active) VALUES (?, ?, ?, ?, ?)',
+                [chromecast_id, device_ip, mac_address, pair_time, true],
                 function(err) {
                     if (err) {
                         logger.error(`Insert pair error: ${err.message}`);
