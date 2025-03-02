@@ -69,7 +69,7 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     #     raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
     # Kết nối Chromecast
-    cast = pychromecast.Chromecast(chromecast_ip)
+    cast = pychromecast.Chromecast(host=chromecast_ip)
     cast.wait()
     # Ngắt ứng dụng hiện tại
     cast.quit_app()
