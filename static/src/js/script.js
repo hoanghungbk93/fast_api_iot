@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const addChromecastForm = document.getElementById('add-chromecast-form');
     const checkoutButton = document.getElementById('checkout-button');
 
+    let selectedChromecastId = null;
+
     // Fetch and display chromecasts
     function fetchChromecasts() {
         fetch('/chromecasts/chromecasts')
@@ -11,62 +13,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 chromecastList.innerHTML = '';
                 chromecasts.forEach(chromecast => {
                     const li = document.createElement('li');
-                    li.textContent = `${chromecast.code} (IP: ${chromecast.mac_address})`;
+                    li.textContent = `${chromecast.code} (MAC: ${chromecast.mac_address})`;
+
+                    // Delete button
                     const deleteButton = document.createElement('button');
                     deleteButton.textContent = 'Delete';
-                    deleteButton.onclick = () => deleteChromecast(chromecast[0]);
+                    deleteButton.onclick = () => deleteChromecast(chromecast.id);
+
+                    // Select for checkout
+                    const selectButton = document.createElement('button');
+                    selectButton.textContent = 'Select';
+                    selectButton.onclick = () => {
+                        selectedChromecastId = chromecast.id;
+                        alert(`Selected Chromecast: ${chromecast.code}`);
+                    };
+
+                    li.appendChild(selectButton);
                     li.appendChild(deleteButton);
                     chromecastList.appendChild(li);
                 });
             });
     }
 
-    // Add chromecast
-    if (addChromecastForm) {
-        addChromecastForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const chromecastCode = document.getElementById('chromecast_code').value;
-            const chromecastIp = document.getElementById('chromecast_ip').value;
-
-            fetch('/chromecasts/chromecasts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    code: chromecastCode,
-                    mac_address: chromecastIp
-                })
-            })
-            .then(response => response.json())
-            .then(() => {
-                fetchChromecasts();
-                addChromecastForm.reset();
-            });
-        });
-    }
-
-    // Delete chromecast
-    function deleteChromecast(chromecastId) {
-        fetch(`/chromecasts/${chromecastId}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(() => fetchChromecasts());
-    }
-
     // Checkout function
     function checkout() {
+        if (!selectedChromecastId) {
+            alert('Please select a Chromecast first!');
+            return;
+        }
+
         fetch('/chromecasts/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ chromecast_id: selectedChromecastId })
         })
         .then(response => response.json())
         .then(data => {
             console.log('Checkout response:', data);
-            // Optionally, update the UI or notify the user
+            alert(`Checkout successful for Chromecast ID ${selectedChromecastId}`);
         })
         .catch(error => {
             console.error('Error during checkout:', error);
@@ -80,4 +66,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial fetch
     fetchChromecasts();
-}); 
+});

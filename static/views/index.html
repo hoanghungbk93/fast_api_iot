@@ -3,25 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Manager</title>
+    <title>Chromecast Manager</title>
     <link rel="stylesheet" href="/static/src/css/styles.css">
 </head>
 <body>
-    <div id="chromecast-form">
-        <h2>Add Chromecast</h2>
+    <div id="container">
+        <h2>Manage Chromecasts</h2>
+
         <form id="add-chromecast-form">
             <input type="text" id="chromecast_code" placeholder="Chromecast Code" required>
-            <input type="text" id="chromecast_ip" placeholder="Chromecast Mac Address" required>
-            <button type="submit">Add Chromecast</button>
+            <input type="text" id="chromecast_mac" placeholder="MAC Address" required>
+            <button type="submit">Add</button>
         </form>
+
+        <ul id="chromecasts-list"></ul>
     </div>
-    <div id="chromecast-list">
-        <h2>Chromecasts</h2>
-        <ul id="chromecasts"></ul>
-    </div>
-    <div id="checkout-section">
-        <button id="checkout-button">Checkout</button>
-    </div>
-    <script src="/static/src/js/script.js"></script>
+
+    <script>
+        const chromecastList = document.getElementById('chromecasts-list');
+        const addForm = document.getElementById('add-chromecast-form');
+
+        function fetchChromecasts() {
+            fetch('/chromecasts/')
+                .then(response => response.json())
+                .then(data => {
+                    chromecastList.innerHTML = "";
+                    data.forEach(chromecast => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            ${chromecast.code} (MAC: ${chromecast.mac_address})
+                            <button onclick="checkoutChromecast(${chromecast.id})">Checkout</button>
+                            <button onclick="deleteChromecast(${chromecast.id})" class="delete-btn">Delete</button>
+                        `;
+                        chromecastList.appendChild(li);
+                    });
+                });
+        }
+
+        function checkoutChromecast(chromecastId) {
+            fetch(`/chromecasts/checkout`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({chromecast_id: chromecastId})
+            })
+            .then(response => response.json())
+            .then(data => alert(`Checkout: ${data.message}`))
+            .catch(error => console.error("Error during checkout:", error));
+        }
+
+        function deleteChromecast(chromecastId) {
+            fetch(`/chromecasts/${chromecastId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(() => fetchChromecasts());
+        }
+
+        addForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const chromecastCode = document.getElementById('chromecast_code').value;
+            const chromecastMac = document.getElementById('chromecast_mac').value;
+
+            fetch('/chromecasts/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({code: chromecastCode, mac_address: chromecastMac})
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchChromecasts();
+                addForm.reset();
+            });
+        });
+
+        fetchChromecasts();
+    </script>
 </body>
-</html> 
+</html>

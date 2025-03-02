@@ -1,21 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, FastAPI
+import subprocess
+from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
+import pychromecast
 from app.models.md_chromecast import Chromecast
 from app.config.database import get_db
 from app.schemas.sch_chromecast import ChromecastCreate, Chromecast as ChromecastSchema
-from typing import List
-import pychromecast
+from app.config.utils import get_ip_from_mac
 
 router = APIRouter(prefix="/chromecasts", tags=["chromecasts"])
 
-app = FastAPI()
 
-@router.get("/chromecasts", response_model=List[ChromecastSchema])
+@router.get("/", response_model=List[ChromecastSchema])
 def read_chromecasts(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    chromecasts = db.query(Chromecast).offset(skip).limit(limit).all()
-    return chromecasts
+    return db.query(Chromecast).offset(skip).limit(limit).all()
 
-@router.post("/chromecasts", response_model=ChromecastSchema)
+@router.post("/", response_model=ChromecastSchema)
 def create_chromecast(chromecast: ChromecastCreate, db: Session = Depends(get_db)):
     db_chromecast = Chromecast(**chromecast.dict())
     db.add(db_chromecast)
@@ -23,28 +23,41 @@ def create_chromecast(chromecast: ChromecastCreate, db: Session = Depends(get_db
     db.refresh(db_chromecast)
     return db_chromecast
 
+@router.delete("/{chromecast_id}")
+def delete_chromecast(chromecast_id: int, db: Session = Depends(get_db)):
+    db_chromecast = db.query(Chromecast).filter(Chromecast.id == chromecast_id).first()
+    if not db_chromecast:
+        raise HTTPException(status_code=404, detail="Chromecast not found")
+    db.delete(db_chromecast)
+    db.commit()
+    return {"message": "Chromecast deleted"}
+
 @router.post("/checkout")
-async def checkout():
-    # Chỉ định địa chỉ IP của Chromecast
-    chromecast_ip = "10.5.20.85"
-    
-    # Quét thiết bị Chromecast trên mạng cụ thể
+async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
+    """API nhận ID của Chromecast từ client"""
+    # Lấy thông tin Chromecast từ DB theo ID
+    chromecast = db.query(Chromecast).filter(Chromecast.id == chromecast_id).first()
+
+    if not chromecast:
+        raise HTTPException(status_code=404, detail="Chromecast not found")
+
+    # Lấy IP từ MAC Address
+    chromecast_ip = get_ip_from_mac(chromecast.mac_address)
+
+    # Quét thiết bị Chromecast
     chromecasts, browser = pychromecast.get_chromecasts(known_hosts=[chromecast_ip])
 
-    # Kiểm tra xem có tìm thấy Chromecast không
     if not chromecasts:
         browser.stop_discovery()
-        raise HTTPException(status_code=404, detail="Chromecast not found on eth1.5 (10.5.20.85)")
+        raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
-    cast = chromecasts[0]  # Lấy thiết bị đầu tiên
+    cast = chromecasts[0]
     cast.wait()
-
-    # Ngắt kết nối ứng dụng hiện tại trên Chromecast
     cast.quit_app()
 
-    # Khởi động lại ứng dụng của bạn
-    cast.start_app("com.example.netnamcasting")
+    # Chạy lệnh ADB để mở app
+    subprocess.run(["adb", "connect", f"{chromecast_ip}:5555"], check=True)
+    subprocess.run(["adb", "-s", f"{chromecast_ip}:5555", "shell", "monkey", "-p", "com.example.netnamcasting", "-c", "android.intent.category.LAUNCHER", "1"], check=True)
 
     browser.stop_discovery()
-
-    return {"message": "Checkout initiated successfully"}
+    return {"message": f"Checkout initiated for Chromecast {chromecast.code} at {chromecast_ip}"}
