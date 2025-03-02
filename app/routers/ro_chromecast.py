@@ -7,6 +7,8 @@ from app.models.md_chromecast import Chromecast
 from app.config.database import get_db
 from app.schemas.sch_chromecast import ChromecastCreate, Chromecast as ChromecastSchema
 from app.config.utils import get_ip_from_mac
+import time
+
 
 router = APIRouter(prefix="/chromecasts", tags=["chromecasts"])
 
@@ -44,20 +46,35 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address)
 
-    # Quét thiết bị Chromecast
-    chromecasts, browser = pychromecast.get_chromecasts(known_hosts=[chromecast_ip])
+    # Sử dụng CastBrowser để tìm Chromecast
+    listener, browser = pychromecast.discovery.CastBrowser()
+    browser.start_discovery()
+    
+    time.sleep(3)  # Chờ quét Chromecast
+    
+    # Lấy danh sách Chromecast tìm thấy
+    chromecasts = [cc for cc in listener.devices if cc.host == chromecast_ip]
 
     if not chromecasts:
         browser.stop_discovery()
         raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
-    cast = chromecasts[0]
+    cast = pychromecast.Chromecast(chromecast_ip)
     cast.wait()
+    
+    # Ngắt ứng dụng hiện tại
     cast.quit_app()
 
-    # Chạy lệnh ADB để mở app
-    subprocess.run(["adb", "connect", f"{chromecast_ip}:5555"], check=True)
-    subprocess.run(["adb", "-s", f"{chromecast_ip}:5555", "shell", "monkey", "-p", "com.example.netnamcasting", "-c", "android.intent.category.LAUNCHER", "1"], check=True)
+    # **ADB CONNECT trước khi chạy lệnh**
+    adb_connect_command = f"adb connect {chromecast_ip}:5555"
+    adb_run_app_command = f"adb -s {chromecast_ip}:5555 shell monkey -p com.example.netnamcasting -c android.intent.category.LAUNCHER 1"
+
+    try:
+        subprocess.run(adb_connect_command, shell=True, check=True)
+        time.sleep(2)  # Chờ kết nối ADB
+        subprocess.run(adb_run_app_command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"ADB command failed: {e}")
 
     browser.stop_discovery()
     return {"message": f"Checkout initiated for Chromecast {chromecast.code} at {chromecast_ip}"}
