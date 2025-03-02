@@ -47,21 +47,25 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     chromecast_ip = get_ip_from_mac(chromecast.mac_address)
 
     # Sử dụng CastBrowser để tìm Chromecast
-    listener, browser = pychromecast.discovery.CastBrowser()
+    cast_listener = pychromecast.discovery.SimpleCastListener()
+
+    browser = pychromecast.discovery.CastBrowser(cast_listener)
     browser.start_discovery()
     
     time.sleep(3)  # Chờ quét Chromecast
-    
-    # Lấy danh sách Chromecast tìm thấy
-    chromecasts = [cc for cc in listener.devices if cc.host == chromecast_ip]
+    browser.stop_discovery()
 
-    if not chromecasts:
-        browser.stop_discovery()
+    
+    # Lấy danh sách các thiết bị tìm được
+    devices = cast_listener.get_cast_devices()
+    chromecast_device = next((dev for dev in devices if dev.host == chromecast_ip), None)
+
+    if not chromecast_device:
         raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
-    cast = pychromecast.Chromecast(chromecast_ip)
+    cast = pychromecast.get_chromecast_from_host((chromecast_ip, 8009))
     cast.wait()
-    
+
     # Ngắt ứng dụng hiện tại
     cast.quit_app()
 
