@@ -121,7 +121,8 @@ app.post('/verify_code', (req, res) => {
             logger.info(`Handshake successful - Device IP: ${device_ip}, Code: ${code}, Chromecast IP: ${chromecast_ip}`);
 
             const mac_address = getMacAddress(device_ip);
-            const pair_time = new Date().toISOString();
+            // Sửa định dạng pair_time: loại bỏ 'Z'
+            const pair_time = new Date().toISOString().replace('Z', '');
 
             db.run(
                 'INSERT INTO pairs (chromecast_id, ip_address, mac_address, pair_time) VALUES (?, ?, ?, ?)',

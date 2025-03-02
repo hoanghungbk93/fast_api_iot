@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import socket
 import subprocess
+import logging
 
 T = TypeVar('T')
 

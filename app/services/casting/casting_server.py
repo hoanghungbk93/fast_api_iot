@@ -300,7 +300,7 @@ def sniff_mdns_query():
 def sniff_mdns_response():
     db = SessionLocal()
     try:
-        sniff(filter="udp port 5353 and src host 10.5.20.85", prn=lambda pkt: handle_mdns_response(pkt, db), iface=ETH1_5, store=0, timeout=3600)
+        sniff(filter="udp port 5353", prn=lambda pkt: handle_mdns_response(pkt, db), iface=ETH1_5, store=0, timeout=3600)
     finally:
         db.close()
 
