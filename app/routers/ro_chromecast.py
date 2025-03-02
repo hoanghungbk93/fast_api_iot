@@ -9,6 +9,7 @@ from app.schemas.sch_chromecast import ChromecastCreate, Chromecast as Chromecas
 from app.config.utils import get_ip_from_mac
 import time
 import logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s:%(message)s")
 
 router = APIRouter(prefix="/chromecasts", tags=["chromecasts"])
 
@@ -46,10 +47,14 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address) 
     logging.info(f"Chromecast IP: {chromecast_ip}")
-    chromecasts, browser = pychromecast.get_listed_chromecasts(known_hosts=[chromecast_ip])
+    chromecasts, browser = pychromecast.get_chromecasts()
     logging.info(f"Chromecasts: {chromecasts}")
-    if not chromecasts:
-        browser.stop_discovery()
+    cast = None
+    for c in chromecasts:
+        if c.device.host == chromecast_ip:
+            cast = c
+            break
+    if cast is None:
         raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
     # Lấy Chromecast đầu tiên trong danh sách
