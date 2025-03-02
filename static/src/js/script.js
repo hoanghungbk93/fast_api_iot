@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const chromecastList = document.getElementById('chromecasts');
     const addChromecastForm = document.getElementById('add-chromecast-form');
+    const checkoutButton = document.getElementById('checkout-button');
 
     // Fetch and display chromecasts
     function fetchChromecasts() {
@@ -52,6 +53,29 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(() => fetchChromecasts());
+    }
+
+    // Checkout function
+    function checkout() {
+        fetch('/checkout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Checkout response:', data);
+            // Optionally, update the UI or notify the user
+        })
+        .catch(error => {
+            console.error('Error during checkout:', error);
+        });
+    }
+
+    // Add event listener for checkout button
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', checkout);
     }
 
     // Initial fetch
