@@ -9,10 +9,20 @@ from app.schemas.sch_chromecast import ChromecastCreate, Chromecast as Chromecas
 from app.config.utils import get_ip_from_mac
 import time
 import logging
+from pychromecast.discovery import SimpleCastListener, CastBrowser
+
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s:%(message)s")
 
 router = APIRouter(prefix="/chromecasts", tags=["chromecasts"])
 
+
+class ChromecastListener(SimpleCastListener):
+    def __init__(self):
+        self.devices = {}
+
+    def add_cast(self, uuid, service):
+        print(f"📡 Found Chromecast: {service[3]} - {service[2]}")
+        self.devices[service[3]] = service[2]  # Lưu tên & IP Chromecast
 
 @router.get("/", response_model=List[ChromecastSchema])
 def read_chromecasts(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
@@ -47,18 +57,18 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address) 
     logging.info(f"Chromecast IP: {chromecast_ip}")
-    chromecasts, browser = pychromecast.get_chromecasts()
-    logging.info(f"Chromecasts: {chromecasts}")
-    cast = None
-    for c in chromecasts:
-        if c.device.host == chromecast_ip:
-            cast = c
-            break
-    if cast is None:
+    # Dùng CastBrowser để quét danh sách Chromecast
+    listener = ChromecastListener()
+    browser = CastBrowser(listener)
+    browser.start_discovery()
+    time.sleep(5)  # Đợi 5 giây để quét
+    browser.stop_discovery()
+    # Kiểm tra xem Chromecast có trong danh sách không
+    if chromecast_ip not in listener.devices.values():
         raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
-    # Lấy Chromecast đầu tiên trong danh sách
-    cast = chromecasts[0]
+    # Kết nối Chromecast
+    cast = pychromecast.Chromecast(chromecast_ip)
     cast.wait()
     # Ngắt ứng dụng hiện tại
     cast.quit_app()
