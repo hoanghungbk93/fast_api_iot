@@ -13,6 +13,7 @@
         <form id="add-chromecast-form">
             <input type="text" id="chromecast_code" placeholder="Chromecast Code" required>
             <input type="text" id="chromecast_mac" placeholder="MAC Address" required>
+            <input type="text" id="chromecast_uuid" placeholder="UUID" required>
             <button type="submit">Add</button>
         </form>
 
@@ -31,7 +32,7 @@
                     data.forEach(chromecast => {
                         const li = document.createElement('li');
                         li.innerHTML = `
-                            ${chromecast.code} (MAC: ${chromecast.mac_address})
+                            ${chromecast.code} (MAC: ${chromecast.mac_address}, UUID: ${chromecast.uuid})
                             <button onclick="checkoutChromecast(${chromecast.id})">Checkout</button>
                             <button onclick="deleteChromecast(${chromecast.id})" class="delete-btn">Delete</button>
                         `;
@@ -62,11 +63,11 @@
             event.preventDefault();
             const chromecastCode = document.getElementById('chromecast_code').value;
             const chromecastMac = document.getElementById('chromecast_mac').value;
-
+            const chromecastUuid = document.getElementById('chromecast_uuid').value;
             fetch('/chromecasts/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({code: chromecastCode, mac_address: chromecastMac})
+                body: JSON.stringify({code: chromecastCode, mac_address: chromecastMac, uuid: chromecastUuid})
             })
             .then(response => response.json())
             .then(() => {

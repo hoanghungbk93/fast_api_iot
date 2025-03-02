@@ -3,7 +3,7 @@ from pydantic import BaseModel
 class ChromecastBase(BaseModel):
     code: str
     mac_address: str
-
+    uuid: str
 class ChromecastCreate(ChromecastBase):
     pass
 
