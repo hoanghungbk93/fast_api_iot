@@ -57,7 +57,7 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
 
     
     # Lấy danh sách các thiết bị tìm được
-    devices = cast_listener.get_cast_devices()
+    devices = cast_listener.devices
     chromecast_device = next((dev for dev in devices if dev.host == chromecast_ip), None)
 
     if not chromecast_device:
