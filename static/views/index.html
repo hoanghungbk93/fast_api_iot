@@ -41,10 +41,9 @@
         }
 
         function checkoutChromecast(chromecastId) {
-            fetch(`/chromecasts/checkout`, {
+            fetch(`/chromecasts/checkout?chromecast_id=${chromecastId}`, {  // Truyền chromecast_id qua query
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({chromecast_id: chromecastId})
+                headers: {'Content-Type': 'application/json'}
             })
             .then(response => response.json())
             .then(data => alert(`Checkout: ${data.message}`))
