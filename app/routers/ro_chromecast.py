@@ -25,16 +25,26 @@ def create_chromecast(chromecast: ChromecastCreate, db: Session = Depends(get_db
 
 @router.post("/checkout")
 async def checkout():
-    chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=["101"])
-    cast = chromecasts[0]
-    cast.wait()
+    # Chỉ định địa chỉ IP của Chromecast
+    chromecast_ip = "10.5.20.85"
     
-    # Disconnect all devices
+    # Quét thiết bị Chromecast trên mạng cụ thể
+    chromecasts, browser = pychromecast.get_chromecasts(known_hosts=[chromecast_ip])
+
+    # Kiểm tra xem có tìm thấy Chromecast không
+    if not chromecasts:
+        browser.stop_discovery()
+        raise HTTPException(status_code=404, detail="Chromecast not found on eth1.5 (10.5.20.85)")
+
+    cast = chromecasts[0]  # Lấy thiết bị đầu tiên
+    cast.wait()
+
+    # Ngắt kết nối ứng dụng hiện tại trên Chromecast
     cast.quit_app()
 
-    # Clear cache and launch your app
+    # Khởi động lại ứng dụng của bạn
     cast.start_app("com.example.netnamcasting")
 
     browser.stop_discovery()
 
-    return {"message": "Checkout initiated"}
+    return {"message": "Checkout initiated successfully"}
