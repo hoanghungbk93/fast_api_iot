@@ -181,7 +181,8 @@ def log_packet_details(pkt, prefix=""):
                         rdata = ar.rdata if isinstance(ar.rdata, str) else str(ar.rdata)
                     #logging.debug(f"{prefix}  Additional {i+1}: {rrname} (Type: {ar.type}, Data: {rdata})")
                 except Exception as e:
-                    logging.debug(f"{prefix}  Additional {i+1}: [Lỗi giải mã: {e}]")
+                    # logging.debug(f"{prefix}  Additional {i+1}: [Lỗi giải mã: {e}]")
+                    pass
 
 def handle_mdns_query(pkt, db: Session):
     if pkt.haslayer(IP) and pkt.haslayer(UDP) and pkt.haslayer(DNS):
