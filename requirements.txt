@@ -2,10 +2,14 @@ fastapi
 uvicorn
 sqlalchemy
 pydantic
-mysqlclient  # or pymysql if using PyMySQL
 python-dotenv  # If you're using environment variables
 sentry-sdk  # If you're using Sentry for error tracking
 logfire  # If you're using Logfire for logging
 requests  # Used in test.py for HTTP requests
 python-jose  # If you're using JWT for authentication
 passlib  # If you're using password hashing
+alembic
+pychromecast
+opentelemetry.instrumentation.asgi
+opentelemetry-instrumentation-fastapi
+pydantic[email]

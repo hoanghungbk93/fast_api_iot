@@ -11,6 +11,14 @@ import subprocess
 import requests  # Thêm requests để gọi API
 from datetime import datetime
 
+def get_interface_mac(interface):
+    try:
+        mac = get_if_hwaddr(interface)
+        return mac
+    except Exception as e:
+        logging.error(f"Không thể lấy MAC của giao diện {interface}: {e}")
+        return "00:00:00:00:00:00"  # Giá trị mặc định nếu lỗi
+
 
 # Hàm utils
 def get_local_ip():
@@ -54,6 +62,8 @@ MCAST_IP = "224.0.0.251"
 SSDP_MCAST_IP = "239.255.255.250"
 MDNS_MCAST_MAC = "01:00:5e:00:00:fb"
 SSDP_MCAST_MAC = "01:00:5e:7f:ff:fa"
+ETH1_3_MAC = get_interface_mac(ETH1_3)
+ETH1_5_MAC = get_interface_mac(ETH1_5)
 
 # Cấu hình SQLAlchemy
 SQLALCHEMY_DATABASE_URL = "sqlite:////opt/fast_api_iot/test.db"
@@ -199,7 +209,7 @@ def handle_mdns_query(pkt, db: Session):
         log_packet_details(pkt, "    ")
 
         pkt[IP].src = PROXY_IP_ETH1_5
-        pkt[Ether].src = "7c:c2:c6:3e:57:77"
+        pkt[Ether].src = ETH1_5_MAC
         try:
             sendp(pkt, iface=ETH1_5, verbose=False)
             #logging.debug(f"Đã chuyển tiếp Query từ {src_ip} qua {ETH1_5} với Src IP {PROXY_IP_ETH1_5}")
@@ -229,7 +239,7 @@ def handle_mdns_response(pkt, db: Session):
             return
 
         pkt[IP].src = PROXY_IP_ETH1_3
-        pkt[Ether].src = "7c:c2:c6:3e:57:77"
+        pkt[Ether].src = ETH1_3_MAC
         for mac in unique_macs:
             pkt[Ether].dst = mac
             try:
@@ -261,7 +271,7 @@ def handle_ssdp_query(pkt, db: Session):
                 return
 
             for mac in unique_macs:
-                eth = Ether(dst=mac, src="7c:c2:c6:3e:57:77")
+                eth = Ether(dst=mac, src=ETH1_3_MAC)
                 ip = IP(src=PROXY_IP_ETH1_3, dst=src_ip, ttl=255)
                 udp = UDP(sport=1900, dport=pkt[UDP].sport)
                 ssdp_payload = (
@@ -284,7 +294,7 @@ def handle_ssdp_query(pkt, db: Session):
                     logging.error(f"Lỗi khi gửi SSDP Response tới {mac}: {e}")
 
             pkt[IP].src = PROXY_IP_ETH1_5
-            pkt[Ether].src = "7c:c2:c6:3e:57:77"
+            pkt[Ether].src = ETH1_3_MAC
             try:
                 sendp(pkt, iface=ETH1_5, verbose=False)
                 #logging.debug(f"Đã chuyển tiếp SSDP Query từ {src_ip} qua {ETH1_5}")
