@@ -64,6 +64,8 @@ MDNS_MCAST_MAC = "01:00:5e:00:00:fb"
 SSDP_MCAST_MAC = "01:00:5e:7f:ff:fa"
 ETH1_3_MAC = get_interface_mac(ETH1_3)
 ETH1_5_MAC = get_interface_mac(ETH1_5)
+logging.info(f"ETH1_3_MAC: {ETH1_3_MAC}")
+logging.info(f"ETH1_5_MAC: {ETH1_5_MAC}")
 
 # Cấu hình SQLAlchemy
 SQLALCHEMY_DATABASE_URL = "sqlite:////opt/fast_api_iot/test.db"
