@@ -206,8 +206,8 @@ def handle_mdns_query(pkt, db: Session):
             logging.debug(f"Query từ {src_ip} không được phép, bỏ qua")
             return
 
-        #logging.info(f"Lưu thông tin iPhone: IP={src_ip}, MAC={src_mac}")
-        #logging.debug(f"[+] Nhận Query từ {src_ip} (MAC: {src_mac}) tới {dst_ip}")
+        logging.info(f"Lưu thông tin iPhone: IP={src_ip}, MAC={src_mac}")
+        logging.debug(f"[+] Nhận Query từ {src_ip} (MAC: {src_mac}) tới {dst_ip}")
         log_packet_details(pkt, "    ")
 
         pkt[IP].src = PROXY_IP_ETH1_5
