@@ -155,31 +155,31 @@ async def device_description(request: Request, db: Session = Depends(get_db)):
 def log_packet_details(pkt, prefix=""):
     if pkt.haslayer(DNS):
         dns = pkt[DNS]
-        #logging.debug(f"{prefix}DNS QR: {'Response' if dns.qr else 'Query'}")
-        #logging.debug(f"{prefix}DNS ID: {dns.id}")
-        #logging.debug(f"{prefix}DNS QCOUNT: {dns.qdcount}")
-        #logging.debug(f"{prefix}DNS ANCOUNT: {dns.ancount}")
-        #logging.debug(f"{prefix}DNS NSCOUNT: {dns.nscount}")
-        #logging.debug(f"{prefix}DNS ARCOUNT: {dns.arcount}")
+        logging.debug(f"{prefix}DNS QR: {'Response' if dns.qr else 'Query'}")
+        logging.debug(f"{prefix}DNS ID: {dns.id}")
+        logging.debug(f"{prefix}DNS QCOUNT: {dns.qdcount}")
+        logging.debug(f"{prefix}DNS ANCOUNT: {dns.ancount}")
+        logging.debug(f"{prefix}DNS NSCOUNT: {dns.nscount}")
+        logging.debug(f"{prefix}DNS ARCOUNT: {dns.arcount}")
         if dns.qdcount > 0 and dns.qd:
             logging.debug(f"{prefix}Questions:")
             for i, q in enumerate(dns.qd):
                 try:
                     qname = q.qname.decode('utf-8', errors='ignore')
-                    #logging.debug(f"{prefix}  Question {i+1}: {qname} (Type: {q.qtype}, Class: {q.qclass})")
+                    logging.debug(f"{prefix}  Question {i+1}: {qname} (Type: {q.qtype}, Class: {q.qclass})")
                 except Exception as e:
                     logging.debug(f"{prefix}  Question {i+1}: [Lỗi giải mã: {e}]")
         if dns.ancount > 0 and dns.an:
-            #logging.debug(f"{prefix}Answers:")
+            logging.debug(f"{prefix}Answers:")
             for i, ans in enumerate(dns.an):
                 try:
                     rrname = ans.rrname.decode('utf-8', errors='ignore')
                     rdata = ans.rdata if isinstance(ans.rdata, str) else str(ans.rdata)
-                    #logging.debug(f"{prefix}  Answer {i+1}: {rrname} (Type: {ans.type}, TTL: {ans.ttl}, Data: {rdata})")
+                    logging.debug(f"{prefix}  Answer {i+1}: {rrname} (Type: {ans.type}, TTL: {ans.ttl}, Data: {rdata})")
                 except Exception as e:
                     logging.debug(f"{prefix}  Answer {i+1}: [Lỗi giải mã: {e}]")
         if dns.arcount > 0 and dns.ar:
-            #logging.debug(f"{prefix}Additional Records:")
+            logging.debug(f"{prefix}Additional Records:")
             for i, ar in enumerate(dns.ar):
                 try:
                     rrname = ar.rrname.decode('utf-8', errors='ignore')
@@ -187,9 +187,9 @@ def log_packet_details(pkt, prefix=""):
                         rdata = f"Priority: {ar.priority}, Weight: {ar.weight}, Port: {ar.port}, Target: {ar.target.decode('utf-8', errors='ignore')}"
                     else:
                         rdata = ar.rdata if isinstance(ar.rdata, str) else str(ar.rdata)
-                    #logging.debug(f"{prefix}  Additional {i+1}: {rrname} (Type: {ar.type}, Data: {rdata})")
+                    logging.debug(f"{prefix}  Additional {i+1}: {rrname} (Type: {ar.type}, Data: {rdata})")
                 except Exception as e:
-                    # logging.debug(f"{prefix}  Additional {i+1}: [Lỗi giải mã: {e}]")
+                    logging.debug(f"{prefix}  Additional {i+1}: [Lỗi giải mã: {e}]")
                     pass
 
 def handle_mdns_query(pkt, db: Session):
@@ -210,7 +210,7 @@ def handle_mdns_query(pkt, db: Session):
         pkt[Ether].src = "00:e0:4d:68:03:16"
         try:
             sendp(pkt, iface=ETH1_5, verbose=False)
-            #logging.debug(f"Đã chuyển tiếp Query từ {src_ip} qua {ETH1_5} với Src IP {PROXY_IP_ETH1_5}")
+            logging.debug(f"Đã chuyển tiếp Query từ {src_ip} qua {ETH1_5} với Src IP {PROXY_IP_ETH1_5}")
         except Exception as e:
             logging.error(f"Lỗi khi chuyển tiếp Query: {e}")
 
