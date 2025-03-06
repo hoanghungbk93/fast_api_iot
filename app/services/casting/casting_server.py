@@ -228,7 +228,7 @@ def handle_mdns_response(pkt, db: Session):
             logging.debug(f"Response từ {src_ip} không phải Chromecast hợp lệ, bỏ qua")
             return
 
-        #logging.debug(f"[+] Nhận Response từ Chromecast {src_ip} → {dst_ip}")
+        logging.debug(f"[+] Nhận Response từ Chromecast {src_ip} → {dst_ip}")
         log_packet_details(pkt, "    ")
 
         allowed_macs = db.query(Pair.mac_address).filter(
@@ -245,8 +245,9 @@ def handle_mdns_response(pkt, db: Session):
         for mac in unique_macs:
             pkt[Ether].dst = mac
             try:
+                logging.debug(f"Gửi Response tới {mac} qua {ETH1_3}")
                 sendp(pkt, iface=ETH1_3, verbose=False)
-                #logging.debug(f"Đã gửi Response tới {mac} qua {ETH1_3}")
+                logging.debug(f"Đã gửi Response tới {mac} qua {ETH1_3}")
             except Exception as e:
                 logging.error(f"Lỗi khi chuyển tiếp Response tới {mac}: {e}")
 
