@@ -204,7 +204,7 @@ def handle_mdns_query(pkt, db: Session):
 
         logging.info(f"Lưu thông tin iPhone: IP={src_ip}, MAC={src_mac}")
         logging.debug(f"[+] Nhận Query từ {src_ip} (MAC: {src_mac}) tới {dst_ip}")
-        log_packet_details(pkt, "    ")
+        #log_packet_details(pkt, "    ")
 
         pkt[IP].src = PROXY_IP_ETH1_5
         pkt[Ether].src = "7c:c2:c6:3e:57:77"
@@ -225,7 +225,7 @@ def handle_mdns_response(pkt, db: Session):
             return
 
         logging.debug(f"[+] Nhận Response từ Chromecast {src_ip} → {dst_ip}")
-        log_packet_details(pkt, "    ")
+        #log_packet_details(pkt, "    ")
 
         allowed_macs = db.query(Pair.mac_address).filter(
             Pair.chromecast_id == chromecast.id
