@@ -62,10 +62,6 @@ MCAST_IP = "224.0.0.251"
 SSDP_MCAST_IP = "239.255.255.250"
 MDNS_MCAST_MAC = "01:00:5e:00:00:fb"
 SSDP_MCAST_MAC = "01:00:5e:7f:ff:fa"
-ETH1_3_MAC = get_interface_mac(ETH1_3)
-ETH1_5_MAC = get_interface_mac(ETH1_5)
-logging.info(f"ETH1_3_MAC: {ETH1_3_MAC}")
-logging.info(f"ETH1_5_MAC: {ETH1_5_MAC}")
 
 # Cấu hình SQLAlchemy
 SQLALCHEMY_DATABASE_URL = "sqlite:////opt/fast_api_iot/test.db"
@@ -211,7 +207,7 @@ def handle_mdns_query(pkt, db: Session):
         log_packet_details(pkt, "    ")
 
         pkt[IP].src = PROXY_IP_ETH1_5
-        pkt[Ether].src = ETH1_5_MAC
+        pkt[Ether].src = "00:e0:4d:68:03:16"
         try:
             sendp(pkt, iface=ETH1_5, verbose=False)
             #logging.debug(f"Đã chuyển tiếp Query từ {src_ip} qua {ETH1_5} với Src IP {PROXY_IP_ETH1_5}")
@@ -241,7 +237,7 @@ def handle_mdns_response(pkt, db: Session):
             return
 
         pkt[IP].src = PROXY_IP_ETH1_3
-        pkt[Ether].src = ETH1_3_MAC
+        pkt[Ether].src = "00:e0:4d:68:03:16"
         for mac in unique_macs:
             pkt[Ether].dst = mac
             try:
@@ -274,7 +270,7 @@ def handle_ssdp_query(pkt, db: Session):
                 return
 
             for mac in unique_macs:
-                eth = Ether(dst=mac, src=ETH1_3_MAC)
+                eth = Ether(dst=mac, src="00:e0:4d:68:03:16")
                 ip = IP(src=PROXY_IP_ETH1_3, dst=src_ip, ttl=255)
                 udp = UDP(sport=1900, dport=pkt[UDP].sport)
                 ssdp_payload = (
@@ -297,7 +293,7 @@ def handle_ssdp_query(pkt, db: Session):
                     logging.error(f"Lỗi khi gửi SSDP Response tới {mac}: {e}")
 
             pkt[IP].src = PROXY_IP_ETH1_5
-            pkt[Ether].src = ETH1_3_MAC
+            pkt[Ether].src = "00:e0:4d:68:03:16"
             try:
                 sendp(pkt, iface=ETH1_5, verbose=False)
                 #logging.debug(f"Đã chuyển tiếp SSDP Query từ {src_ip} qua {ETH1_5}")
