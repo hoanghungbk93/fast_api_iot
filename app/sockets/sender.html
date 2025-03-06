@@ -98,6 +98,11 @@
             background-color: #f44336;
             margin-top: 10px;
         }
+
+        #openNetflixButton {
+            background-color: #f44336;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -113,9 +118,15 @@
         </div>
 
         <!-- Connected State -->
-        <div id="connectedState" class="connected-state">
+        <!-- <div id="connectedState" class="connected-state">
             <div id="status"></div>
             <button id="disconnectButton">Disconnect</button>
+        </div> -->
+
+        <!-- Connected State -->
+        <div id="openNetflix" class="connected-state">
+            <div id="status"></div>
+            <button id="openNetflixButton">Open Netflix</button>
         </div>
     </div>
 
@@ -128,6 +139,7 @@
         const statusDiv = document.getElementById('status');
         const connectionForm = document.getElementById('connectionForm');
         const connectedState = document.getElementById('connectedState');
+        const openNetflix = document.getElementById('openNetflix');
         const disconnectButton = document.getElementById('disconnectButton');
 
         function showStatus(message, type) {
@@ -138,7 +150,13 @@
 
         function showConnectedState() {
             connectionForm.style.display = 'none';
-            connectedState.style.display = 'block';
+            // connectedState.style.display = 'block';
+            showOpenNetflix();
+        }
+
+        function showOpenNetflix() {
+            // connectionForm.style.display = 'none';
+            openNetflix.style.display = 'block';
         }
 
         function showConnectionForm() {
@@ -153,7 +171,7 @@
             try {
                 showStatus('Connecting...', 'connecting');
                 
-                const response = await fetch(`/verify_code`, {
+                const response = await fetch(`http://192.168.1.100:8001/verify_code`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -198,6 +216,21 @@
             }
         }
 
+        async function openNetflixFromServer() {
+            const API_URL = 'http://192.168.1.100:8000/chromecasts';
+            const response = await fetch(`${API_URL}/open_netflix`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Device-ID': deviceId
+                }
+            });
+
+            const data = await response.json();
+            
+            
+        }
+
         // Event Listeners
         codeInput.addEventListener('input', function(e) {
             this.value = this.value.replace(/[^0-9]/g, '');
@@ -217,7 +250,9 @@
             }
         });
 
-        disconnectButton.addEventListener('click', disconnect);
+        openNetflixButton.addEventListener('click', openNetflixFromServer);
+
+        // disconnectButton.addEventListener('click', disconnect);
 
         // Handle page unload
         window.addEventListener('beforeunload', () => {
