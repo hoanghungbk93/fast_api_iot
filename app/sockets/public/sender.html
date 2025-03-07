@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sender</title>
+    <title>Remote Control</title>
     <link rel="stylesheet" href="/css/remote.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/remote.js" defer></script>
 </head>
 <body>
     <div id="pairing-screen">
@@ -16,56 +18,20 @@
     <div id="remote-screen" style="display: none;">
         <div class="remote-container">
             <div class="remote">
-                <div class="button up" onclick="sendCommand('up')"></div>
-                <div class="button left" onclick="sendCommand('left')"></div>
-                <div class="button select" onclick="sendCommand('select')"></div>
-                <div class="button right" onclick="sendCommand('right')"></div>
-                <div class="button down" onclick="sendCommand('down')"></div>
+                <div class="button up" onclick="sendCommand('up')">▲</div>
+                <div class="button left" onclick="sendCommand('left')">◀</div>
+                <div class="button select" onclick="sendCommand('select')">OK</div>
+                <div class="button right" onclick="sendCommand('right')">▶</div>
+                <div class="button down" onclick="sendCommand('down')">▼</div>
             </div>
             <div class="bottom-buttons">
                 <button onclick="sendCommand('back')">Back</button>
                 <button onclick="sendCommand('home')">Home</button>
                 <button onclick="sendCommand('mute')">Mute</button>
                 <button onclick="sendCommand('unmute')">Unmute</button>
-                <button onclick="sendCommand('open_netflix')">Open Netflix</button>
+                <button onclick="sendCommand('open_netflix')">Netflix</button>
             </div>
         </div>
     </div>
-
-    <script src="/js/remote.js"></script>
-    <script>
-        function pairDevice() {
-            const code = document.getElementById('code-input').value;
-            fetch('/verify_code', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ code })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showStatus('Connected successfully!', 'success');
-                    showConnectedState();
-                } else {
-                    showStatus(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showStatus('Server error', 'error');
-            });
-        }
-
-        function showStatus(message, status) {
-            alert(`${status.toUpperCase()}: ${message}`);
-        }
-
-        function showConnectedState() {
-            document.getElementById('pairing-screen').style.display = 'none';
-            document.getElementById('remote-screen').style.display = 'block';
-        }
-    </script>
 </body>
 </html>

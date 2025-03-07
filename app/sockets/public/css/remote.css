@@ -1,78 +1,132 @@
+/* Reset cơ bản */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
     font-family: Arial, sans-serif;
+    background: #f5f5f5;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
 }
 
+/* Ẩn màn hình pairing khi kết nối */
+#pairing-screen, #remote-screen {
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Input và Button trên màn hình Pairing */
+#code-input {
+    width: 80%;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff;
+    text-align: center;
+    outline: none;
+    margin-bottom: 15px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 4px 4px 8px #bebebe, -4px -4px 8px #ffffff;
+}
+
+button:hover {
+    background: #45a049;
+}
+
+/* Giao diện Remote */
 .remote-container {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
+/* Khu vực chính của remote */
 .remote {
+    width: 250px;
+    height: 250px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    box-shadow: 6px 6px 12px #bebebe, -6px -6px 12px #ffffff;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-areas: 
+        ". up ."
+        "left select right"
+        ". down .";
     gap: 10px;
-    margin-bottom: 20px;
+    padding: 20px;
+    position: relative;
 }
 
+/* Các nút điều hướng */
 .button {
-    width: 60px;
-    height: 60px;
-    background-color: #ddd;
+    width: 50px;
+    height: 50px;
+    background: #e0e0e0;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 4px 4px 8px #bebebe, -4px -4px 8px #ffffff;
     cursor: pointer;
+    transition: transform 0.1s ease;
 }
 
-.button.up {
-    grid-column: 2;
-    grid-row: 1;
+.button:active {
+    transform: scale(0.9);
 }
 
-.button.left {
-    grid-column: 1;
-    grid-row: 2;
+/* Gán vị trí cho từng nút */
+.up { grid-area: up; }
+.down { grid-area: down; }
+.left { grid-area: left; }
+.right { grid-area: right; }
+.select {
+    grid-area: select;
+    width: 60px;
+    height: 60px;
 }
 
-.button.select {
-    grid-column: 2;
-    grid-row: 2;
-    background-color: #bbb;
-}
-
-.button.right {
-    grid-column: 3;
-    grid-row: 2;
-}
-
-.button.down {
-    grid-column: 2;
-    grid-row: 3;
-}
-
+/* Nhóm các nút phía dưới */
 .bottom-buttons {
+    margin-top: 20px;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 10px;
 }
 
-button {
-    padding: 10px 20px;
-    background-color: #4285f4;
-    color: white;
+.bottom-buttons button {
+    width: 100px;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 12px;
+    background: #e0e0e0;
+    box-shadow: 4px 4px 8px #bebebe, -4px -4px 8px #ffffff;
     border: none;
-    border-radius: 5px;
     cursor: pointer;
+    transition: 0.2s;
 }
 
-button:hover {
-    background-color: #357ae8;
+.bottom-buttons button:active {
+    transform: scale(0.9);
 }
