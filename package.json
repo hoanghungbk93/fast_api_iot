@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "castv2-client": "^1.2.0"
+  }
+}

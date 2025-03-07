@@ -99,18 +99,6 @@ async def open_netflix(chromecast_id: int, db: Session = Depends(get_db)):
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address) 
     logging.info(f"Chromecast IP: {chromecast_ip}")
-    # Dùng CastBrowser để quét danh sách Chromecast
-    # listener = ChromecastListener()
-    # browser = CastBrowser(listener)
-    # browser.start_discovery()
-    # time.sleep(5)  # Đợi 5 giây để quét
-    # browser.stop_discovery()
-    # logging.info(f"Devices: {listener.devices}")
-    # # Kiểm tra xem Chromecast có trong danh sách không
-    # if chromecast_ip not in listener.devices.values():
-    #     raise HTTPException(status_code=404, detail="Chromecast not found on network")
-
-    # Kết nối Chromecast
     cast = pychromecast.get_chromecast_from_host((chromecast_ip, 8009, chromecast.uuid, None, None))
     cast.wait()
     # Ngắt ứng dụng hiện tại
@@ -118,7 +106,7 @@ async def open_netflix(chromecast_id: int, db: Session = Depends(get_db)):
 
     # **ADB CONNECT trước khi chạy lệnh**
     adb_connect_command = f"adb connect {chromecast_ip}:5555"
-    adb_run_app_command = f"adb -s {chromecast_ip}:5555 shell monkey -p com.example.netnamcasting -c android.intent.category.LAUNCHER 1"
+    adb_run_app_command = f"adb -s {chromecast_ip}:5555 shell monkey -p com.netflix.ninja -c android.intent.category.LAUNCHER 1"
 
     try:
         subprocess.run(adb_connect_command, shell=True, check=True)
@@ -127,4 +115,17 @@ async def open_netflix(chromecast_id: int, db: Session = Depends(get_db)):
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"ADB command failed: {e}")
 
-    return {"message": f"Checkout initiated for Chromecast {chromecast.code} at {chromecast_ip}"}
+    return {"message": f"Open Netflix on Chromecast at {chromecast_ip}"}
+
+# Add edit_chromecast API
+@router.put("/{chromecast_id}") 
+def edit_chromecast(chromecast_id: int, chromecast: ChromecastCreate, db: Session = Depends(get_db)):
+    db_chromecast = db.query(Chromecast).filter(Chromecast.id == chromecast_id).first()
+    if not db_chromecast:
+        raise HTTPException(status_code=404, detail="Chromecast not found")
+    db_chromecast.name = chromecast.name
+    db_chromecast.code = chromecast.code
+    db_chromecast.mac_address = chromecast.mac_address
+    db.commit()
+    db.refresh(db_chromecast)
+    return db_chromecast

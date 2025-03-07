@@ -319,7 +319,7 @@ app.post('/send_command', (req, res) => {
 });
 
 
-function sendCastCommand(ip, command) {
+function sendCastCommand(ip, command, callback) {
     const client = new Client();
 
     client.connect(ip, () => {
@@ -329,7 +329,7 @@ function sendCastCommand(ip, command) {
             if (err) {
                 logger.error(`Error launching receiver: ${err.message}`);
                 client.close();
-                return;
+                return callback(err);
             }
 
             logger.info(`Receiver launched on Chromecast at ${ip}`);
@@ -347,26 +347,42 @@ function sendCastCommand(ip, command) {
             };
 
             if (command === "open_netflix") {
-                client.launchApp('Netflix', (err) => {
-                    if (err) logger.error(`Error launching Netflix: ${err.message}`);
+                receiver.launchApp('Netflix', (err) => {
+                    if (err) {
+                        logger.error(`Error launching Netflix: ${err.message}`);
+                        client.close();
+                        return callback(err);
+                    }
+                    logger.info(`Netflix launched on Chromecast at ${ip}`);
+                    client.close();
+                    return callback(null);
                 });
             } else if (commands[command]) {
-                receiver.send({
+                receiver.sendMessage('urn:x-cast:com.google.cast.media', {
                     type: "KEYPRESS",
                     key: commands[command]
+                }, (err) => {
+                    if (err) {
+                        logger.error(`Error sending command ${command}: ${err.message}`);
+                        client.close();
+                        return callback(err);
+                    }
+                    logger.info(`Sent command ${command} to Chromecast`);
+                    client.close();
+                    return callback(null);
                 });
-                logger.info(`Sent command ${command} to Chromecast`);
             } else {
                 logger.warn(`Unknown command: ${command}`);
+                client.close();
+                return callback(new Error("Unknown command"));
             }
-
-            setTimeout(() => client.close(), 1000); // Đóng kết nối sau khi gửi lệnh
         });
     });
 
     client.on('error', (err) => {
         logger.error(`Chromecast error: ${err.message}`);
         client.close();
+        return callback(err);
     });
 }
 
