@@ -325,29 +325,31 @@ function sendCastCommand(ip, command, callback) {
     client.connect(ip, () => {
         logger.info(`Connected to Chromecast at ${ip}`);
 
-        client.launch(DefaultMediaReceiver, (err, receiver) => {
-            if (err) {
-                logger.error(`Error launching receiver: ${err.message}`);
-                client.close();
-                return callback(err);
-            }
+        const commands = {
+            "up": "KEY_UP",
+            "down": "KEY_DOWN",
+            "left": "KEY_LEFT",
+            "right": "KEY_RIGHT",
+            "select": "KEY_ENTER",
+            "back": "KEY_BACK",
+            "home": "KEY_HOME",
+            "mute": "MUTE",
+            "unmute": "UNMUTE"
+        };
 
-            logger.info(`Receiver launched on Chromecast at ${ip}`);
+        if (command === "open_netflix") {
+            client.launch(DefaultMediaReceiver, (err, receiver) => {
+                if (err) {
+                    logger.error(`Error launching receiver: ${err.message}`);
+                    client.close();
+                    return callback(err);
+                }
 
-            const commands = {
-                "up": "KEY_UP",
-                "down": "KEY_DOWN",
-                "left": "KEY_LEFT",
-                "right": "KEY_RIGHT",
-                "select": "KEY_ENTER",
-                "back": "KEY_BACK",
-                "home": "KEY_HOME",
-                "mute": "MUTE",
-                "unmute": "UNMUTE"
-            };
-
-            if (command === "open_netflix") {
-                receiver.launchApp('Netflix', (err) => {
+                receiver.load({
+                    contentId: 'Netflix',
+                    contentType: 'video/mp4',
+                    streamType: 'BUFFERED'
+                }, { autoplay: true }, (err, status) => {
                     if (err) {
                         logger.error(`Error launching Netflix: ${err.message}`);
                         client.close();
@@ -357,7 +359,15 @@ function sendCastCommand(ip, command, callback) {
                     client.close();
                     return callback(null);
                 });
-            } else if (commands[command]) {
+            });
+        } else if (commands[command]) {
+            client.launch(DefaultMediaReceiver, (err, receiver) => {
+                if (err) {
+                    logger.error(`Error launching receiver: ${err.message}`);
+                    client.close();
+                    return callback(err);
+                }
+
                 receiver.sendMessage('urn:x-cast:com.google.cast.media', {
                     type: "KEYPRESS",
                     key: commands[command]
@@ -371,12 +381,12 @@ function sendCastCommand(ip, command, callback) {
                     client.close();
                     return callback(null);
                 });
-            } else {
-                logger.warn(`Unknown command: ${command}`);
-                client.close();
-                return callback(new Error("Unknown command"));
-            }
-        });
+            });
+        } else {
+            logger.warn(`Unknown command: ${command}`);
+            client.close();
+            return callback(new Error("Unknown command"));
+        }
     });
 
     client.on('error', (err) => {
