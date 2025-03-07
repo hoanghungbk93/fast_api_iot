@@ -9,6 +9,7 @@
 <body>
     <div id="pairing-screen">
         <h1>Pairing Screen</h1>
+        <input type="text" id="code-input" placeholder="Enter verification code">
         <button onclick="pairDevice()">Pair Device</button>
     </div>
 
@@ -26,7 +27,7 @@
                 <button onclick="sendCommand('home')">Home</button>
                 <button onclick="sendCommand('mute')">Mute</button>
                 <button onclick="sendCommand('unmute')">Unmute</button>
-                <button onclick="openNetflix()">Open Netflix</button>
+                <button onclick="sendCommand('open_netflix')">Open Netflix</button>
             </div>
         </div>
     </div>
@@ -37,7 +38,7 @@
         const socket = io();
 
         function pairDevice() {
-            const code = prompt("Enter verification code:");
+            const code = document.getElementById('code-input').value;
             fetch('/verify_code', {
                 method: 'POST',
                 headers: {
