@@ -440,28 +440,40 @@ function runAdbCommand(ip, command, callback) {
 
 async function runAdbCommand2(ip, command, callback) {
     const adbCommands = {
-        "up": ["shell", "input", "keyevent", "19"],
-        "down": ["shell", "input", "keyevent", "20"],
-        "left": ["shell", "input", "keyevent", "21"],
-        "right": ["shell", "input", "keyevent", "22"],
-        "select": ["shell", "input", "keyevent", "23"],
-        "back": ["shell", "input", "keyevent", "4"],
-        "home": ["shell", "input", "keyevent", "3"],
-        "mute": ["shell", "service", "call", "audio", "7", "i32", "3", "i32", "0"],
-        "unmute": ["shell", "service", "call", "audio", "7", "i32", "3", "i32", "1"],
-        "open_netflix": ["shell", "monkey", "-p", "com.netflix.ninja", "-c", "android.intent.category.LAUNCHER", "1"]
+        "up": "input keyevent 19",
+        "down": "input keyevent 20",
+        "left": "input keyevent 21",
+        "right": "input keyevent 22",
+        "select": "input keyevent 23",
+        "back": "input keyevent 4",
+        "home": "input keyevent 3",
+        "mute": "service call audio 7 i32 3 i32 0",
+        "unmute": "service call audio 7 i32 3 i32 1",
+        "open_netflix": "monkey -p com.netflix.ninja -c android.intent.category.LAUNCHER 1"
     };
 
-    const args = adbCommands[command];
-    if (!args) {
+    const adbCommand = adbCommands[command];
+    if (!adbCommand) {
         return callback(new Error("Invalid command"));
     }
 
     try {
-        const device = client.getDevice(`${ip}:5555`);
-        await device.shell(args.join(" "));
-        console.log(`ADB command executed: ${command}`);
-        callback(null);
+        const serial = `${ip}:5555`;
+        const devices = await client.listDevices();
+        const device = devices.find(d => d.id === serial);
+        if (!device) {
+            throw new Error(`Device ${serial} not found`);
+        }
+
+        const stream = await client.shell(serial, adbCommand);
+        let output = '';
+        stream.on('data', (data) => {
+            output += data.toString();
+        });
+        stream.on('end', () => {
+            console.log(`ADB command executed: ${output}`);
+            callback(null);
+        });
     } catch (error) {
         console.error(`Error executing ADB command: ${error.message}`);
         callback(error);
