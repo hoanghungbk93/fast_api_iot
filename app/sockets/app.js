@@ -319,74 +319,85 @@ app.post('/send_command', (req, res) => {
 });
 
 
-// Thay thế ADB bằng Google Cast Protocol
 function sendCastCommand(ip, command) {
     const client = new Client();
 
     client.connect(ip, () => {
         logger.info(`Connected to Chromecast at ${ip}`);
-        
-        client.launch(require('castv2-client').DefaultMediaReceiver, (err, player) => {
+
+        client.getSessions((err, sessions) => {
             if (err) {
-                logger.error(`Error launching media receiver: ${err.message}`);
+                logger.error(`Error getting sessions: ${err.message}`);
                 client.close();
                 return;
             }
 
-            const media = {
-                contentId: '', // Chỉ điền nếu mở video cụ thể
-                contentType: 'video/mp4',
-                streamType: 'BUFFERED',
-            };
-
-            switch (command) {
-                case "up":
-                    client.send({ type: "KEYPRESS", key: "KEY_UP" });
-                    break;
-                case "down":
-                    client.send({ type: "KEYPRESS", key: "KEY_DOWN" });
-                    break;
-                case "left":
-                    client.send({ type: "KEYPRESS", key: "KEY_LEFT" });
-                    break;
-                case "right":
-                    client.send({ type: "KEYPRESS", key: "KEY_RIGHT" });
-                    break;
-                case "select":
-                    client.send({ type: "KEYPRESS", key: "KEY_ENTER" });
-                    break;
-                case "back":
-                    client.send({ type: "KEYPRESS", key: "KEY_BACK" });
-                    break;
-                case "home":
-                    client.send({ type: "KEYPRESS", key: "KEY_HOME" });
-                    break;
-                case "mute":
-                    player.setVolume({ muted: true }, () => {
-                        logger.info("Muted Chromecast");
-                    });
-                    break;
-                case "unmute":
-                    player.setVolume({ muted: false }, () => {
-                        logger.info("Unmuted Chromecast");
-                    });
-                    break;
-                case "open_netflix":
-                    client.launchApp('Netflix', (err) => {
-                        if (err) logger.error(`Error launching Netflix: ${err.message}`);
-                    });
-                    break;
-                default:
-                    logger.warn(`Unknown command: ${command}`);
+            if (!sessions || sessions.length === 0) {
+                logger.warn(`No active session found on Chromecast at ${ip}`);
+                client.close();
+                return;
             }
 
-            client.close();
-        });
-    });
+            const session = sessions[0]; // Chọn session đầu tiên
+            client.join(session, DefaultMediaReceiver, (err, receiver) => {
+                if (err) {
+                    logger.error(`Error joining session: ${err.message}`);
+                    client.close();
+                    return;
+                }
 
-    client.on('error', (err) => {
-        logger.error(`Chromecast error: ${err.message}`);
-        client.close();
+                // Gửi lệnh thông qua `InputChannel`
+                const inputChannel = client.createChannel(
+                    'sender-0',
+                    'receiver-0',
+                    'urn:x-cast:com.google.cast.input',
+                    'JSON'
+                );
+
+                switch (command) {
+                    case "up":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_UP" });
+                        break;
+                    case "down":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_DOWN" });
+                        break;
+                    case "left":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_LEFT" });
+                        break;
+                    case "right":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_RIGHT" });
+                        break;
+                    case "select":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_ENTER" });
+                        break;
+                    case "back":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_BACK" });
+                        break;
+                    case "home":
+                        inputChannel.send({ type: "KEYPRESS", key: "KEY_HOME" });
+                        break;
+                    case "mute":
+                        receiver.setVolume({ muted: true }, () => {
+                            logger.info("Muted Chromecast");
+                        });
+                        break;
+                    case "unmute":
+                        receiver.setVolume({ muted: false }, () => {
+                            logger.info("Unmuted Chromecast");
+                        });
+                        break;
+                    case "open_netflix":
+                        client.launchApp('Netflix', (err) => {
+                            if (err) logger.error(`Error launching Netflix: ${err.message}`);
+                        });
+                        break;
+                    default:
+                        logger.warn(`Unknown command: ${command}`);
+                }
+
+                setTimeout(() => client.close(), 1000); // Đóng kết nối sau khi gửi lệnh
+            });
+        });
     });
 }
 
