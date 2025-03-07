@@ -126,7 +126,6 @@ app.get('/websocket_test', (req, res) => {
     res.sendFile(path.join(__dirname, 'websocket_test.html'));
 });
 
-// API verify_code
 app.post('/verify_code', (req, res) => {
     const { code } = req.body;
     const device_ip = req.ip.replace('::ffff:', '');
@@ -142,13 +141,14 @@ app.post('/verify_code', (req, res) => {
             return res.status(500).json({ success: false, message: "Server error" });
         }
 
+        console.log("Query Result:", chromecast);
+
         if (chromecast) {
             const { id: chromecast_id, mac_address: chromecast_mac } = chromecast;
             const chromecast_ip = getIpFromMac(chromecast_mac);
             logger.info(`Handshake successful - Device IP: ${device_ip}, Code: ${code}, Chromecast IP: ${chromecast_ip}`);
 
             const mac_address = getMacAddress(device_ip);
-            // Sửa định dạng pair_time: loại bỏ 'Z'
             const pair_time = new Date().toISOString().replace('Z', '');
 
             db.run(
