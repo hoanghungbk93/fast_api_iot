@@ -7,7 +7,7 @@ const winston = require('winston');
 const cors = require('cors'); // Thêm cors
 const remoteActions = require('./virtual_remote');
 const { exec } = require('child_process');
-const { Client } = require('castv2-client'); // Thư viện điều khiển Chromecast
+const { Client, DefaultMediaReceiver } = require('castv2-client'); // Thư viện điều khiển Chromecast
 
 
 // Cấu hình logger với winston
