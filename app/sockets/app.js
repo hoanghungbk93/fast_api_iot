@@ -368,7 +368,8 @@ function sendCastCommand(ip, command, callback) {
                     return callback(err);
                 }
 
-                receiver.send({
+                const platform = receiver.createController('PlatformSender');
+                platform.send({
                     type: "KEYPRESS",
                     key: commands[command]
                 }, (err) => {
