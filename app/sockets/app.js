@@ -6,6 +6,7 @@ const path = require('path');
 const winston = require('winston');
 const cors = require('cors'); // Thêm cors
 const remoteActions = require('./virtual_remote');
+const { exec } = require('child_process');
 
 // Cấu hình logger với winston
 const logger = winston.createLogger({
@@ -306,6 +307,34 @@ app.post('/send_command', (req, res) => {
     });
 });
 
+function runAdbCommand(ip, command, callback) {
+    const adbCommands = {
+        "up": `adb -s ${ip}:5555 shell input keyevent 19`,
+        "down": `adb -s ${ip}:5555 shell input keyevent 20`,
+        "left": `adb -s ${ip}:5555 shell input keyevent 21`,
+        "right": `adb -s ${ip}:5555 shell input keyevent 22`,
+        "select": `adb -s ${ip}:5555 shell input keyevent 23`,
+        "back": `adb -s ${ip}:5555 shell input keyevent 4`,
+        "home": `adb -s ${ip}:5555 shell input keyevent 3`,
+        "mute": `adb -s ${ip}:5555 shell service call audio 7 i32 3 i32 0`,
+        "unmute": `adb -s ${ip}:5555 shell service call audio 7 i32 3 i32 1`,
+        "open_netflix": `adb -s ${ip}:5555 shell monkey -p com.netflix.ninja -c android.intent.category.LAUNCHER 1`
+    };
+
+    const adbCommand = adbCommands[command];
+    if (!adbCommand) {
+        return callback(new Error("Invalid command"));
+    }
+
+    exec(adbCommand, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error executing ADB command: ${error.message}`);
+            return callback(error);
+        }
+        console.log(`ADB command executed: ${stdout}`);
+        callback(null);
+    });
+}
 
 // Chạy server
 const PORT = 8001;
