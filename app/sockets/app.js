@@ -295,9 +295,12 @@ app.post('/send_command', (req, res) => {
                     return res.status(404).json({ success: false, message: "Chromecast IP not found" });
                 }
 
-                logger.info(`Sending command '${command}' to Chromecast IP: ${chromecast_ip}`);
-
-                io.emit("command", command);
+                runAdbCommand(chromecast_ip, command, (error) => {
+                    if (error) {
+                        return res.status(500).json({ success: false, message: "Failed to execute command" });
+                    }
+                    res.json({ success: true });
+                });
                 res.json({ success: true, message: `Command '${command}' sent to Chromecast IP: ${chromecast_ip}` });
             });
         } else {
