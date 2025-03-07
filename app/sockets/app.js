@@ -308,7 +308,7 @@ app.post('/send_command', (req, res) => {
             }
 
             // Chỉ gọi res.json() **sau khi** lệnh ADB được thực thi xong
-            sendCastCommand(chromecast_ip, command, (error) => {
+            runAdbCommand(chromecast_ip, command, (error) => {
                 if (error) {
                     return res.status(500).json({ success: false, message: "Failed to execute command" });
                 }
