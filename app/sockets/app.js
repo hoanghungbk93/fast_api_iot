@@ -104,6 +104,11 @@ io.on('connection', (socket) => {
                 console.log(`Unknown action: ${action}`);
             }
         });
+
+        socket.on('open_netflix', () => {
+            remoteActions.open_netflix(ip);
+            console.log(`Open Netflix executed on IP: ${ip}`);
+        });
     });
 
     socket.on('disconnect', () => {
@@ -257,6 +262,34 @@ app.get('/device_info', (req, res) => {
         } else {
             logger.warn(`Chromecast not found for MAC: ${chromecast_mac} (IP: ${chromecast_ip})`);
             res.status(404).json({ success: false, message: "Chromecast not found" });
+        }
+    });
+});
+
+// API send_command
+app.post('/send_command', (req, res) => {
+    const { command } = req.body;
+    const device_ip = req.ip.replace('::ffff:', '');
+
+    db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], (err, pair) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: "Server error" });
+        }
+
+        if (pair) {
+            const chromecast_id = pair.chromecast_id;
+
+            db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: "Server error" });
+                }
+
+                const chromecast_ip = getIpFromMac(chromecast.mac_address);
+                io.to(chromecast_ip).emit(command);
+                res.json({ success: true });
+            });
+        } else {
+            res.status(404).json({ success: false, message: "Device not paired" });
         }
     });
 });
