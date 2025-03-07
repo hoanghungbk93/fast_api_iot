@@ -347,7 +347,7 @@ function sendCastCommand(ip, command, callback) {
 
                 receiver.load({
                     contentId: 'Netflix',
-                    contentType: 'video/mp4',
+                    contentType: 'application/vnd.ms-sstr+xml',
                     streamType: 'BUFFERED'
                 }, { autoplay: true }, (err, status) => {
                     if (err) {
@@ -368,7 +368,7 @@ function sendCastCommand(ip, command, callback) {
                     return callback(err);
                 }
 
-                receiver.sendMessage('urn:x-cast:com.google.cast.media', {
+                receiver.send({
                     type: "KEYPRESS",
                     key: commands[command]
                 }, (err) => {
