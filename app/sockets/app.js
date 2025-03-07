@@ -325,79 +325,48 @@ function sendCastCommand(ip, command) {
     client.connect(ip, () => {
         logger.info(`Connected to Chromecast at ${ip}`);
 
-        client.getSessions((err, sessions) => {
+        client.launch(DefaultMediaReceiver, (err, receiver) => {
             if (err) {
-                logger.error(`Error getting sessions: ${err.message}`);
+                logger.error(`Error launching receiver: ${err.message}`);
                 client.close();
                 return;
             }
 
-            if (!sessions || sessions.length === 0) {
-                logger.warn(`No active session found on Chromecast at ${ip}`);
-                client.close();
-                return;
+            logger.info(`Receiver launched on Chromecast at ${ip}`);
+
+            const commands = {
+                "up": "KEY_UP",
+                "down": "KEY_DOWN",
+                "left": "KEY_LEFT",
+                "right": "KEY_RIGHT",
+                "select": "KEY_ENTER",
+                "back": "KEY_BACK",
+                "home": "KEY_HOME",
+                "mute": "MUTE",
+                "unmute": "UNMUTE"
+            };
+
+            if (command === "open_netflix") {
+                client.launchApp('Netflix', (err) => {
+                    if (err) logger.error(`Error launching Netflix: ${err.message}`);
+                });
+            } else if (commands[command]) {
+                receiver.send({
+                    type: "KEYPRESS",
+                    key: commands[command]
+                });
+                logger.info(`Sent command ${command} to Chromecast`);
+            } else {
+                logger.warn(`Unknown command: ${command}`);
             }
 
-            const session = sessions[0]; // Chọn session đầu tiên
-            client.join(session, DefaultMediaReceiver, (err, receiver) => {
-                if (err) {
-                    logger.error(`Error joining session: ${err.message}`);
-                    client.close();
-                    return;
-                }
-
-                // Gửi lệnh thông qua `InputChannel`
-                const inputChannel = client.createChannel(
-                    'sender-0',
-                    'receiver-0',
-                    'urn:x-cast:com.google.cast.input',
-                    'JSON'
-                );
-
-                switch (command) {
-                    case "up":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_UP" });
-                        break;
-                    case "down":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_DOWN" });
-                        break;
-                    case "left":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_LEFT" });
-                        break;
-                    case "right":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_RIGHT" });
-                        break;
-                    case "select":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_ENTER" });
-                        break;
-                    case "back":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_BACK" });
-                        break;
-                    case "home":
-                        inputChannel.send({ type: "KEYPRESS", key: "KEY_HOME" });
-                        break;
-                    case "mute":
-                        receiver.setVolume({ muted: true }, () => {
-                            logger.info("Muted Chromecast");
-                        });
-                        break;
-                    case "unmute":
-                        receiver.setVolume({ muted: false }, () => {
-                            logger.info("Unmuted Chromecast");
-                        });
-                        break;
-                    case "open_netflix":
-                        client.launchApp('Netflix', (err) => {
-                            if (err) logger.error(`Error launching Netflix: ${err.message}`);
-                        });
-                        break;
-                    default:
-                        logger.warn(`Unknown command: ${command}`);
-                }
-
-                setTimeout(() => client.close(), 1000); // Đóng kết nối sau khi gửi lệnh
-            });
+            setTimeout(() => client.close(), 1000); // Đóng kết nối sau khi gửi lệnh
         });
+    });
+
+    client.on('error', (err) => {
+        logger.error(`Chromecast error: ${err.message}`);
+        client.close();
     });
 }
 
