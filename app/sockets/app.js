@@ -7,8 +7,20 @@ const winston = require('winston');
 const cors = require('cors'); // Thêm cors
 const remoteActions = require('./virtual_remote');
 const { exec } = require('child_process');
-const { Client, DefaultMediaReceiver } = require('castv2-client'); // Thư viện điều khiển Chromecast
+const adb = require('adbkit');
+const client = adb.createClient();
+async function initializeAdb(ip) {
+    try {
+        await client.connect(ip, 5555);
+        console.log(`Connected to ${ip}:5555`);
+    } catch (err) {
+        console.error(`Failed to connect: ${err.message}`);
+        throw err;
+    }
+}
 
+// Khởi động kết nối
+initializeAdb("192.168.1.6").catch(console.error);
 
 // Cấu hình logger với winston
 const logger = winston.createLogger({
@@ -308,7 +320,7 @@ app.post('/send_command', (req, res) => {
             }
 
             // Chỉ gọi res.json() **sau khi** lệnh ADB được thực thi xong
-            runAdbCommand(chromecast_ip, command, (error) => {
+            runAdbCommand2(chromecast_ip, command, (error) => {
                 if (error) {
                     return res.status(500).json({ success: false, message: "Failed to execute command" });
                 }
@@ -424,6 +436,36 @@ function runAdbCommand(ip, command, callback) {
         console.log(`ADB command executed: ${stdout}`);
         callback(null);
     });
+}
+
+async function runAdbCommand2(ip, command, callback) {
+    const adbCommands = {
+        "up": ["shell", "input", "keyevent", "19"],
+        "down": ["shell", "input", "keyevent", "20"],
+        "left": ["shell", "input", "keyevent", "21"],
+        "right": ["shell", "input", "keyevent", "22"],
+        "select": ["shell", "input", "keyevent", "23"],
+        "back": ["shell", "input", "keyevent", "4"],
+        "home": ["shell", "input", "keyevent", "3"],
+        "mute": ["shell", "service", "call", "audio", "7", "i32", "3", "i32", "0"],
+        "unmute": ["shell", "service", "call", "audio", "7", "i32", "3", "i32", "1"],
+        "open_netflix": ["shell", "monkey", "-p", "com.netflix.ninja", "-c", "android.intent.category.LAUNCHER", "1"]
+    };
+
+    const args = adbCommands[command];
+    if (!args) {
+        return callback(new Error("Invalid command"));
+    }
+
+    try {
+        const device = client.getDevice(`${ip}:5555`);
+        await device.shell(args.join(" "));
+        console.log(`ADB command executed: ${command}`);
+        callback(null);
+    } catch (error) {
+        console.error(`Error executing ADB command: ${error.message}`);
+        callback(error);
+    }
 }
 
 // Chạy server
