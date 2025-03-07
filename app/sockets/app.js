@@ -268,6 +268,7 @@ app.get('/device_info', (req, res) => {
 });
 
 // API send_command
+
 app.post('/send_command', (req, res) => {
     const { command } = req.body;
     const device_ip = req.ip.replace('::ffff:', '');
@@ -280,35 +281,41 @@ app.post('/send_command', (req, res) => {
             return res.status(500).json({ success: false, message: "Server error" });
         }
 
-        if (pair) {
-            const chromecast_id = pair.chromecast_id;
+        if (!pair) {
+            logger.warn(`No paired device found for IP: ${device_ip}`);
+            return res.status(404).json({ success: false, message: "Device not paired" });
+        }
 
-            db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
-                if (err) {
-                    logger.error(`DB error on chromecast lookup: ${err.message}`);
-                    return res.status(500).json({ success: false, message: "Server error" });
+        const chromecast_id = pair.chromecast_id;
+
+        db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
+            if (err) {
+                logger.error(`DB error on chromecast lookup: ${err.message}`);
+                return res.status(500).json({ success: false, message: "Server error" });
+            }
+
+            if (!chromecast) {
+                logger.warn(`No Chromecast found for ID: ${chromecast_id}`);
+                return res.status(404).json({ success: false, message: "Chromecast not found" });
+            }
+
+            const chromecast_ip = getIpFromMac(chromecast.mac_address);
+            if (!chromecast_ip) {
+                logger.error(`No IP found for Chromecast with MAC: ${chromecast.mac_address}`);
+                return res.status(404).json({ success: false, message: "Chromecast IP not found" });
+            }
+
+            // Chỉ gọi res.json() **sau khi** lệnh ADB được thực thi xong
+            runAdbCommand(chromecast_ip, command, (error) => {
+                if (error) {
+                    return res.status(500).json({ success: false, message: "Failed to execute command" });
                 }
-
-                const chromecast_ip = getIpFromMac(chromecast.mac_address);
-                if (!chromecast_ip) {
-                    logger.error(`No IP found for Chromecast with MAC: ${chromecast.mac_address}`);
-                    return res.status(404).json({ success: false, message: "Chromecast IP not found" });
-                }
-
-                runAdbCommand(chromecast_ip, command, (error) => {
-                    if (error) {
-                        return res.status(500).json({ success: false, message: "Failed to execute command" });
-                    }
-                    res.json({ success: true });
-                });
                 res.json({ success: true, message: `Command '${command}' sent to Chromecast IP: ${chromecast_ip}` });
             });
-        } else {
-            logger.warn(`No paired device found for IP: ${device_ip}`);
-            res.status(404).json({ success: false, message: "Device not paired" });
-        }
+        });
     });
 });
+
 
 function runAdbCommand(ip, command, callback) {
     const adbCommands = {
