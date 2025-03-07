@@ -271,8 +271,11 @@ app.post('/send_command', (req, res) => {
     const { command } = req.body;
     const device_ip = req.ip.replace('::ffff:', '');
 
+    logger.info(`Received command request: ${command} from ${device_ip}`);
+
     db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], (err, pair) => {
         if (err) {
+            logger.error(`DB error on send_command: ${err.message}`);
             return res.status(500).json({ success: false, message: "Server error" });
         }
 
@@ -281,18 +284,28 @@ app.post('/send_command', (req, res) => {
 
             db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
                 if (err) {
+                    logger.error(`DB error on chromecast lookup: ${err.message}`);
                     return res.status(500).json({ success: false, message: "Server error" });
                 }
 
                 const chromecast_ip = getIpFromMac(chromecast.mac_address);
-                io.to(chromecast_ip).emit(command);
-                res.json({ success: true });
+                if (!chromecast_ip) {
+                    logger.error(`No IP found for Chromecast with MAC: ${chromecast.mac_address}`);
+                    return res.status(404).json({ success: false, message: "Chromecast IP not found" });
+                }
+
+                logger.info(`Sending command '${command}' to Chromecast IP: ${chromecast_ip}`);
+
+                io.emit("command", command);
+                res.json({ success: true, message: `Command '${command}' sent to Chromecast IP: ${chromecast_ip}` });
             });
         } else {
+            logger.warn(`No paired device found for IP: ${device_ip}`);
             res.status(404).json({ success: false, message: "Device not paired" });
         }
     });
 });
+
 
 // Chạy server
 const PORT = 8001;
