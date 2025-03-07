@@ -32,11 +32,8 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script src="/js/remote.js"></script>
     <script>
-        const socket = io();
-
         function pairDevice() {
             const code = document.getElementById('code-input').value;
             fetch('/verify_code', {

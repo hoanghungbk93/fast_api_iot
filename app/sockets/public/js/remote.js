@@ -1,5 +1,3 @@
-const socket = io();
-
 function sendCommand(command) {
     fetch('/send_command', {
         method: 'POST',
