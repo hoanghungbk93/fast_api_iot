@@ -22,3 +22,4 @@
 2025-03-06 15:23:48 INFO: GET / - IP: 127.0.0.1 - Status: 304 - 2ms
 2025-03-06 15:35:16 INFO: GET / - IP: 127.0.0.1 - Status: 200 - 3ms
 2025-03-06 15:35:32 INFO: GET / - IP: 127.0.0.1 - Status: 200 - 5ms
+2025-03-07 09:52:54 INFO: Server running at http://0.0.0.0:8001

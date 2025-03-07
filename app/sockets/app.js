@@ -5,6 +5,7 @@ const db = require('./db');
 const path = require('path');
 const winston = require('winston');
 const cors = require('cors'); // Thêm cors
+const remoteActions = require('./virtual_remote');
 
 // Cấu hình logger với winston
 const logger = winston.createLogger({
@@ -89,10 +90,31 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         logger.info(`Socket.IO Client disconnected: ${socket.id}`);
     });
+
+    socket.on('pair_success', (data) => {
+        const { ip } = data;
+        console.log(`Pairing successful with IP: ${ip}`);
+        socket.emit('navigate', '/remote.html');
+
+        socket.on('remote_action', (action) => {
+            if (remoteActions[action]) {
+                remoteActions[action](ip);
+                console.log(`Action ${action} executed on IP: ${ip}`);
+            } else {
+                console.log(`Unknown action: ${action}`);
+            }
+        });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+    });
 });
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'sender.html'));
+    res.sendFile(path.join(__dirname, 'public', 'sender.html'));
 });
 
 app.get('/websocket_test', (req, res) => {

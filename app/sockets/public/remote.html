@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Remote</title>
+    <link rel="stylesheet" href="/css/remote.css">
+</head>
+<body>
+    <div class="remote-container">
+        <div class="remote">
+            <div class="button up" onclick="sendCommand('up')"></div>
+            <div class="button left" onclick="sendCommand('left')"></div>
+            <div class="button select" onclick="sendCommand('select')"></div>
+            <div class="button right" onclick="sendCommand('right')"></div>
+            <div class="button down" onclick="sendCommand('down')"></div>
+        </div>
+        <div class="bottom-buttons">
+            <button onclick="sendCommand('back')">Back</button>
+            <button onclick="sendCommand('home')">Home</button>
+            <button onclick="sendCommand('mute')">Mute</button>
+            <button onclick="sendCommand('unmute')">Unmute</button>
+        </div>
+    </div>
+    <script src="/js/remote.js"></script>
+</body>
+</html>
