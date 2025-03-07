@@ -7,6 +7,8 @@ const winston = require('winston');
 const cors = require('cors'); // Thêm cors
 const remoteActions = require('./virtual_remote');
 const { exec } = require('child_process');
+const { Client } = require('castv2-client'); // Thư viện điều khiển Chromecast
+
 
 // Cấu hình logger với winston
 const logger = winston.createLogger({
@@ -306,7 +308,7 @@ app.post('/send_command', (req, res) => {
             }
 
             // Chỉ gọi res.json() **sau khi** lệnh ADB được thực thi xong
-            runAdbCommand(chromecast_ip, command, (error) => {
+            sendCastCommand(chromecast_ip, command, (error) => {
                 if (error) {
                     return res.status(500).json({ success: false, message: "Failed to execute command" });
                 }
@@ -316,6 +318,77 @@ app.post('/send_command', (req, res) => {
     });
 });
 
+
+// Thay thế ADB bằng Google Cast Protocol
+function sendCastCommand(ip, command) {
+    const client = new Client();
+
+    client.connect(ip, () => {
+        logger.info(`Connected to Chromecast at ${ip}`);
+        
+        client.launch(require('castv2-client').DefaultMediaReceiver, (err, player) => {
+            if (err) {
+                logger.error(`Error launching media receiver: ${err.message}`);
+                client.close();
+                return;
+            }
+
+            const media = {
+                contentId: '', // Chỉ điền nếu mở video cụ thể
+                contentType: 'video/mp4',
+                streamType: 'BUFFERED',
+            };
+
+            switch (command) {
+                case "up":
+                    client.send({ type: "KEYPRESS", key: "KEY_UP" });
+                    break;
+                case "down":
+                    client.send({ type: "KEYPRESS", key: "KEY_DOWN" });
+                    break;
+                case "left":
+                    client.send({ type: "KEYPRESS", key: "KEY_LEFT" });
+                    break;
+                case "right":
+                    client.send({ type: "KEYPRESS", key: "KEY_RIGHT" });
+                    break;
+                case "select":
+                    client.send({ type: "KEYPRESS", key: "KEY_ENTER" });
+                    break;
+                case "back":
+                    client.send({ type: "KEYPRESS", key: "KEY_BACK" });
+                    break;
+                case "home":
+                    client.send({ type: "KEYPRESS", key: "KEY_HOME" });
+                    break;
+                case "mute":
+                    player.setVolume({ muted: true }, () => {
+                        logger.info("Muted Chromecast");
+                    });
+                    break;
+                case "unmute":
+                    player.setVolume({ muted: false }, () => {
+                        logger.info("Unmuted Chromecast");
+                    });
+                    break;
+                case "open_netflix":
+                    client.launchApp('Netflix', (err) => {
+                        if (err) logger.error(`Error launching Netflix: ${err.message}`);
+                    });
+                    break;
+                default:
+                    logger.warn(`Unknown command: ${command}`);
+            }
+
+            client.close();
+        });
+    });
+
+    client.on('error', (err) => {
+        logger.error(`Chromecast error: ${err.message}`);
+        client.close();
+    });
+}
 
 function runAdbCommand(ip, command, callback) {
     const adbCommands = {
