@@ -23,3 +23,15 @@
 2025-03-06 15:35:16 INFO: GET / - IP: 127.0.0.1 - Status: 200 - 3ms
 2025-03-06 15:35:32 INFO: GET / - IP: 127.0.0.1 - Status: 200 - 5ms
 2025-03-07 09:52:54 INFO: Server running at http://0.0.0.0:8001
+2025-03-08 07:22:17 INFO: Server running at http://0.0.0.0:8001
+2025-03-08 07:22:36 INFO: Server running at http://0.0.0.0:8001
+2025-03-08 07:22:54 INFO: GET / - IP: 127.0.0.1 - Status: 404 - 11ms
+2025-03-08 07:25:21 INFO: Server running at http://0.0.0.0:8001
+2025-03-08 07:25:32 INFO: GET / - IP: 127.0.0.1 - Status: 200 - 12ms
+2025-03-08 07:25:32 INFO: GET /css/remote.css - IP: 127.0.0.1 - Status: 200 - 12ms
+2025-03-08 07:25:32 INFO: GET /js/remote.js - IP: 127.0.0.1 - Status: 200 - 2ms
+2025-03-08 07:25:32 INFO: GET /favicon.ico - IP: 127.0.0.1 - Status: 404 - 4ms
+2025-03-08 07:25:39 INFO: POST /verify_code - IP: 127.0.0.1 - Status: 500 - 13ms
+2025-03-08 07:25:55 INFO: GET /websocket_test - IP: 127.0.0.1 - Status: 200 - 3ms
+2025-03-08 07:30:36 INFO: Server running at http://0.0.0.0:8001
+2025-03-08 07:30:36 INFO: 📌 [SOCKET.IO] Client Connected: uOs43N9I0bnWIz93AAAB - IP: 127.0.0.1

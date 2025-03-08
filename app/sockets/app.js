@@ -4,11 +4,21 @@ const { Server } = require('socket.io');
 const db = require('./db');
 const path = require('path');
 const winston = require('winston');
-const cors = require('cors'); // Thêm cors
+const cors = require('cors');
 const remoteActions = require('./virtual_remote');
 const { exec } = require('child_process');
 const adb = require('adbkit');
+const LRU = require('lru-cache');
+
 const client = adb.createClient();
+
+// **LRU Cache for Chromecast IP & MAC**
+const chromecastCache = new LRU({
+    max: 100, // Store up to 100 devices
+    ttl: 1000 * 60 * 60 // Cache for 1 hour
+});
+
+// **Initialize ADB for Chromecast**
 async function initializeAdb(ip) {
     try {
         await client.connect(ip, 5555);
@@ -19,17 +29,12 @@ async function initializeAdb(ip) {
     }
 }
 
-// Khởi động kết nối
-initializeAdb("192.168.1.6").catch(console.error);
-
-// Cấu hình logger với winston
+// **Logger Setup**
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.printf(({ timestamp, level, message }) => {
-            return `${timestamp} ${level.toUpperCase()}: ${message}`;
-        })
+        winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level.toUpperCase()}: ${message}`)
     ),
     transports: [
         new winston.transports.Console(),
@@ -39,23 +44,21 @@ const logger = winston.createLogger({
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+const io = new Server(httpServer, { cors: { origin: "*", methods: ["GET", "POST"] } });
+io.on('connection', (socket) => {
+    const clientIp = socket.handshake.address;
+    logger.info(`📌 [SOCKET.IO] Client Connected: ${socket.id} - IP: ${clientIp}`);
+
+    // **When the client disconnects**
+    socket.on('disconnect', (reason) => {
+        logger.info(`🔌 [SOCKET.IO] Client Disconnected: ${socket.id} - IP: ${clientIp} - Reason: ${reason}`);
+    });
 });
 
-// Middleware để parse JSON
 app.use(express.json());
+app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 
-// Thêm middleware CORS cho tất cả route HTTP
-app.use(cors({
-    origin: "*", // Cho phép tất cả origin, bao gồm null
-    methods: ["GET", "POST"]
-}));
-
-// Middleware logging cho tất cả request
+// **Middleware Logging**
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
@@ -65,82 +68,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// Hàm getMacAddress
-function getMacAddress(ip) {
-    try {
-        const { execSync } = require('child_process');
-        const result = execSync(`arp -n ${ip}`).toString();
-        for (const line of result.split('\n')) {
-            if (line.includes(ip)) {
-                return line.split(/\s+/)[2] || "00:00:00:00:00:00";
-            }
-        }
-        logger.warn(`No MAC found for IP: ${ip}`);
-    } catch (e) {
-        logger.error(`Error retrieving MAC for ${ip}: ${e.message}`);
-    }
-    return "00:00:00:00:00:00";
-}
-
-// Hàm getIpFromMac
-function getIpFromMac(mac) {
-    try {
-        const { execSync } = require('child_process');
-        const result = execSync('arp -n').toString();
-        for (const line of result.split('\n')) {
-            if (line.toLowerCase().includes(mac.toLowerCase())) {
-                return line.split(/\s+/)[0];
-            }
-        }
-        logger.warn(`No IP found for MAC: ${mac}`);
-    } catch (e) {
-        logger.error(`Error retrieving IP for ${mac}: ${e.message}`);
-    }
-    return null;
-}
-
-// Socket.IO events
-io.on('connection', (socket) => {
-    logger.info(`Socket.IO Client connected: ${socket.id}`);
-    socket.on('disconnect', () => {
-        logger.info(`Socket.IO Client disconnected: ${socket.id}`);
-    });
-
-    socket.on('pair_success', (data) => {
-        const { ip } = data;
-        console.log(`Pairing successful with IP: ${ip}`);
-        socket.emit('navigate', '/remote.html');
-
-        socket.on('remote_action', (action) => {
-            if (remoteActions[action]) {
-                remoteActions[action](ip);
-                console.log(`Action ${action} executed on IP: ${ip}`);
-            } else {
-                console.log(`Unknown action: ${action}`);
-            }
+// **Cache Chromecast IP**
+async function getChromecastIP(mac) {
+    let ip = chromecastCache.get(mac);
+    if (!ip) {
+        console.log(`Cache miss for MAC: ${mac}, querying DB...`);
+        ip = await new Promise((resolve, reject) => {
+            db.get('SELECT ip_address FROM chromecasts WHERE mac_address = ?', [mac], (err, row) => {
+                if (err) return reject(err);
+                resolve(row ? row.ip_address : null);
+            });
         });
 
-        socket.on('open_netflix', () => {
-            remoteActions.open_netflix(ip);
-            console.log(`Open Netflix executed on IP: ${ip}`);
-        });
-    });
+        if (ip) {
+            chromecastCache.set(mac, ip); // Cache it for future use
+        }
+    }
+    return ip;
+}
 
-    socket.on('disconnect', () => {
-        console.log('user disconnected');
-    });
-});
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'sender.html'));
-});
-
-app.get('/websocket_test', (req, res) => {
-    res.sendFile(path.join(__dirname, 'websocket_test.html'));
-});
-
+// **Pairing Request Handler**
 app.post('/verify_code', (req, res) => {
     const { code } = req.body;
     const device_ip = req.ip.replace('::ffff:', '');
@@ -150,295 +97,57 @@ app.post('/verify_code', (req, res) => {
         return res.status(400).json({ success: false, message: "No code provided" });
     }
 
-    db.get('SELECT id, mac_address FROM chromecasts WHERE code = ?', [code], (err, chromecast) => {
-        if (err) {
-            logger.error(`DB error on verify_code: ${err.message}`);
-            return res.status(500).json({ success: false, message: "Server error" });
-        }
-
-        console.log("Query Result:", chromecast);
+    db.get('SELECT id, mac_address FROM chromecasts WHERE code = ?', [code], async (err, chromecast) => {
+        if (err) return res.status(500).json({ success: false, message: "Server error" });
 
         if (chromecast) {
             const { id: chromecast_id, mac_address: chromecast_mac } = chromecast;
-            const chromecast_ip = getIpFromMac(chromecast_mac);
-            logger.info(`Handshake successful - Device IP: ${device_ip}, Code: ${code}, Chromecast IP: ${chromecast_ip}`);
+            const chromecast_ip = await getChromecastIP(chromecast_mac);
 
-            const mac_address = getMacAddress(device_ip);
-            const pair_time = new Date().toISOString().replace('Z', '');
+            if (!chromecast_ip) return res.status(404).json({ success: false, message: "Chromecast not found" });
 
             db.run(
                 'INSERT INTO pairs (chromecast_id, ip_address, mac_address, pair_time, active) VALUES (?, ?, ?, ?, ?)',
-                [chromecast_id, device_ip, mac_address, pair_time, true],
+                [chromecast_id, device_ip, chromecast_mac, new Date().toISOString(), true],
                 function(err) {
-                    if (err) {
-                        logger.error(`Insert pair error: ${err.message}`);
-                        return res.status(500).json({ success: false, message: "Server error" });
-                    }
+                    if (err) return res.status(500).json({ success: false, message: "Server error" });
 
-                    db.get('SELECT COUNT(*) as count FROM pairs WHERE chromecast_id = ?', [chromecast_id], (err, row) => {
-                        if (err) {
-                            logger.error(`Count error: ${err.message}`);
-                            return res.status(500).json({ success: false, message: "Server error" });
-                        }
-
-                        const connections = row.count;
-                        io.emit('connection_update', { chromecast_ip, connections });
-                        logger.info(`Emitted connection_update: chromecast_ip=${chromecast_ip}, connections=${connections}`);
-                        res.json({ success: true, message: "Connected successfully" });
-                    });
+                    io.emit('connection_update', { chromecast_ip });
+                    res.json({ success: true, message: "Connected successfully" });
                 }
             );
         } else {
-            logger.warn(`Invalid code received from IP: ${device_ip}`);
             res.status(400).json({ success: false, message: "Invalid code" });
         }
     });
 });
 
-// API disconnect
-app.post('/disconnect', (req, res) => {
-    const device_ip = req.ip.replace('::ffff:', '');
-
-    db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], (err, pair) => {
-        if (err) {
-            logger.error(`DB error on disconnect: ${err.message}`);
-            return res.status(500).json({ success: false, message: "Server error" });
-        }
-
-        if (pair) {
-            const chromecast_id = pair.chromecast_id;
-
-            db.run('DELETE FROM pairs WHERE ip_address = ?', [device_ip], (err) => {
-                if (err) {
-                    logger.error(`Delete pair error: ${err.message}`);
-                    return res.status(500).json({ success: false, message: "Server error" });
-                }
-
-                db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
-                    if (err) {
-                        logger.error(`Get chromecast error: ${err.message}`);
-                        return res.status(500).json({ success: false, message: "Server error" });
-                    }
-
-                    const chromecast_ip = chromecast ? getIpFromMac(chromecast.mac_address) : null;
-                    db.get('SELECT COUNT(*) as count FROM pairs WHERE chromecast_id = ?', [chromecast_id], (err, row) => {
-                        if (err) {
-                            logger.error(`Count error: ${err.message}`);
-                            return res.status(500).json({ success: false, message: "Server error" });
-                        }
-
-                        const connections = row.count;
-                        logger.info(`Device disconnected: ${device_ip}`);
-                        io.emit('connection_update', { chromecast_ip, connections });
-                        logger.info(`Emitted connection_update: chromecast_ip=${chromecast_ip}, connections=${connections}`);
-                        res.json({ success: true, message: "Disconnected successfully" });
-                    });
-                });
-            });
-        } else {
-            logger.warn(`Device not found for IP: ${device_ip}`);
-            res.status(404).json({ success: false, message: "Device not found" });
-        }
-    });
-});
-
-// API device_info
-app.get('/device_info', (req, res) => {
-    const chromecast_ip = req.ip.replace('::ffff:', '');
-
-    logger.info(`Device info requested from IP: ${chromecast_ip}`);
-    const chromecast_mac = getMacAddress(chromecast_ip);
-
-    db.get('SELECT id, code FROM chromecasts WHERE mac_address = ?', [chromecast_mac], (err, chromecast) => {
-        if (err) {
-            logger.error(`DB error on device_info: ${err.message}`);
-            return res.status(500).json({ success: false, message: "Server error" });
-        }
-
-        if (chromecast) {
-            const { id: chromecast_id, code } = chromecast;
-
-            db.get('SELECT COUNT(*) as count FROM pairs WHERE chromecast_id = ?', [chromecast_id], (err, row) => {
-                if (err) {
-                    logger.error(`Count error on device_info: ${err.message}`);
-                    return res.status(500).json({ success: false, message: "Server error" });
-                }
-
-                const connections = row.count;
-                logger.info(`Device info retrieved - Chromecast IP: ${chromecast_ip}, MAC: ${chromecast_mac}, Code: ${code}, Connections: ${connections}`);
-                res.json({
-                    success: true,
-                    data: {
-                        code: code,
-                        connections: connections
-                    }
-                });
-            });
-        } else {
-            logger.warn(`Chromecast not found for MAC: ${chromecast_mac} (IP: ${chromecast_ip})`);
-            res.status(404).json({ success: false, message: "Chromecast not found" });
-        }
-    });
-});
-
-// API send_command
-
-app.post('/send_command', (req, res) => {
+// **Send Command to Chromecast**
+app.post('/send_command', async (req, res) => {
     const { command } = req.body;
     const device_ip = req.ip.replace('::ffff:', '');
 
-    logger.info(`Received command request: ${command} from ${device_ip}`);
+    db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], async (err, pair) => {
+        if (err) return res.status(500).json({ success: false, message: "Server error" });
 
-    db.get('SELECT chromecast_id FROM pairs WHERE ip_address = ?', [device_ip], (err, pair) => {
-        if (err) {
-            logger.error(`DB error on send_command: ${err.message}`);
-            return res.status(500).json({ success: false, message: "Server error" });
-        }
+        if (!pair) return res.status(404).json({ success: false, message: "Device not paired" });
 
-        if (!pair) {
-            logger.warn(`No paired device found for IP: ${device_ip}`);
-            return res.status(404).json({ success: false, message: "Device not paired" });
-        }
+        db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [pair.chromecast_id], async (err, chromecast) => {
+            if (err) return res.status(500).json({ success: false, message: "Server error" });
 
-        const chromecast_id = pair.chromecast_id;
+            const chromecast_ip = await getChromecastIP(chromecast.mac_address);
+            if (!chromecast_ip) return res.status(404).json({ success: false, message: "Chromecast IP not found" });
 
-        db.get('SELECT mac_address FROM chromecasts WHERE id = ?', [chromecast_id], (err, chromecast) => {
-            if (err) {
-                logger.error(`DB error on chromecast lookup: ${err.message}`);
-                return res.status(500).json({ success: false, message: "Server error" });
-            }
-
-            if (!chromecast) {
-                logger.warn(`No Chromecast found for ID: ${chromecast_id}`);
-                return res.status(404).json({ success: false, message: "Chromecast not found" });
-            }
-
-            const chromecast_ip = getIpFromMac(chromecast.mac_address);
-            if (!chromecast_ip) {
-                logger.error(`No IP found for Chromecast with MAC: ${chromecast.mac_address}`);
-                return res.status(404).json({ success: false, message: "Chromecast IP not found" });
-            }
-
-            // Chỉ gọi res.json() **sau khi** lệnh ADB được thực thi xong
-            runAdbCommand2(chromecast_ip, command, (error) => {
-                if (error) {
-                    return res.status(500).json({ success: false, message: "Failed to execute command" });
-                }
-                res.json({ success: true, message: `Command '${command}' sent to Chromecast IP: ${chromecast_ip}` });
+            runAdbCommand(chromecast_ip, command, (error) => {
+                if (error) return res.status(500).json({ success: false, message: "Failed to execute command" });
+                res.json({ success: true, message: `Command '${command}' sent to Chromecast` });
             });
         });
     });
 });
 
-
-function sendCastCommand(ip, command, callback) {
-    const client = new Client();
-
-    client.connect(ip, () => {
-        logger.info(`Connected to Chromecast at ${ip}`);
-
-        const commands = {
-            "up": "KEY_UP",
-            "down": "KEY_DOWN",
-            "left": "KEY_LEFT",
-            "right": "KEY_RIGHT",
-            "select": "KEY_ENTER",
-            "back": "KEY_BACK",
-            "home": "KEY_HOME",
-            "mute": "MUTE",
-            "unmute": "UNMUTE"
-        };
-
-        if (command === "open_netflix") {
-            client.launch(DefaultMediaReceiver, (err, receiver) => {
-                if (err) {
-                    logger.error(`Error launching receiver: ${err.message}`);
-                    client.close();
-                    return callback(err);
-                }
-
-                receiver.load({
-                    contentId: 'Netflix',
-                    contentType: 'application/vnd.ms-sstr+xml',
-                    streamType: 'BUFFERED'
-                }, { autoplay: true }, (err, status) => {
-                    if (err) {
-                        logger.error(`Error launching Netflix: ${err.message}`);
-                        client.close();
-                        return callback(err);
-                    }
-                    logger.info(`Netflix launched on Chromecast at ${ip}`);
-                    client.close();
-                    return callback(null);
-                });
-            });
-        } else if (commands[command]) {
-            client.launch(DefaultMediaReceiver, (err, receiver) => {
-                if (err) {
-                    logger.error(`Error launching receiver: ${err.message}`);
-                    client.close();
-                    return callback(err);
-                }
-
-                const receiverController = receiver.createController('ReceiverController');
-                receiverController.send({
-                    type: "KEYPRESS",
-                    key: commands[command]
-                }, (err) => {
-                    if (err) {
-                        logger.error(`Error sending command ${command}: ${err.message}`);
-                        client.close();
-                        return callback(err);
-                    }
-                    logger.info(`Sent command ${command} to Chromecast`);
-                    client.close();
-                    return callback(null);
-                });
-            });
-        } else {
-            logger.warn(`Unknown command: ${command}`);
-            client.close();
-            return callback(new Error("Unknown command"));
-        }
-    });
-
-    client.on('error', (err) => {
-        logger.error(`Chromecast error: ${err.message}`);
-        client.close();
-        return callback(err);
-    });
-}
-
-function runAdbCommand(ip, command, callback) {
-    const adbCommands = {
-        "up": `adb -s ${ip}:5555 shell input keyevent 19`,
-        "down": `adb -s ${ip}:5555 shell input keyevent 20`,
-        "left": `adb -s ${ip}:5555 shell input keyevent 21`,
-        "right": `adb -s ${ip}:5555 shell input keyevent 22`,
-        "select": `adb -s ${ip}:5555 shell input keyevent 23`,
-        "back": `adb -s ${ip}:5555 shell input keyevent 4`,
-        "home": `adb -s ${ip}:5555 shell input keyevent 3`,
-        "mute": `adb -s ${ip}:5555 shell service call audio 7 i32 3 i32 0`,
-        "unmute": `adb -s ${ip}:5555 shell service call audio 7 i32 3 i32 1`,
-        "open_netflix": `adb -s ${ip}:5555 shell monkey -p com.netflix.ninja -c android.intent.category.LAUNCHER 1`
-    };
-
-    const adbCommand = adbCommands[command];
-    if (!adbCommand) {
-        return callback(new Error("Invalid command"));
-    }
-
-    exec(adbCommand, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing ADB command: ${error.message}`);
-            return callback(error);
-        }
-        console.log(`ADB command executed: ${stdout}`);
-        callback(null);
-    });
-}
-
-async function runAdbCommand2(ip, command, callback) {
+// **Optimized ADB Command Execution**
+async function runAdbCommand(ip, command, callback) {
     const adbCommands = {
         "up": "input keyevent 19",
         "down": "input keyevent 20",
@@ -453,34 +162,34 @@ async function runAdbCommand2(ip, command, callback) {
     };
 
     const adbCommand = adbCommands[command];
-    if (!adbCommand) {
-        return callback(new Error("Invalid command"));
-    }
+    if (!adbCommand) return callback(new Error("Invalid command"));
 
     try {
         const serial = `${ip}:5555`;
-        const devices = await client.listDevices();
-        const device = devices.find(d => d.id === serial);
-        if (!device) {
-            throw new Error(`Device ${serial} not found`);
-        }
+        // const devices = await client.listDevices();
+        // if (!devices.find(d => d.id === serial)) throw new Error(`Device ${serial} not found`);
 
         const stream = await client.shell(serial, adbCommand);
         let output = '';
-        stream.on('data', (data) => {
-            output += data.toString();
-        });
-        stream.on('end', () => {
-            console.log(`ADB command executed: ${output}`);
-            callback(null);
-        });
+        stream.on('data', (data) => { output += data.toString(); });
+        stream.on('end', () => { callback(null); });
     } catch (error) {
         console.error(`Error executing ADB command: ${error.message}`);
         callback(error);
     }
 }
 
-// Chạy server
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'sender.html'));
+});
+
+app.get('/websocket_test', (req, res) => {
+    res.sendFile(path.join(__dirname, 'websocket_test.html'));
+});
+
+// **Run Server**
 const PORT = 8001;
 httpServer.listen(PORT, '0.0.0.0', () => {
     logger.info(`Server running at http://0.0.0.0:${PORT}`);
