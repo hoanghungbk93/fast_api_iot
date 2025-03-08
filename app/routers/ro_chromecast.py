@@ -57,16 +57,6 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
     # Lấy IP từ MAC Address
     chromecast_ip = get_ip_from_mac(chromecast.mac_address) 
     logging.info(f"Chromecast IP: {chromecast_ip}")
-    # Dùng CastBrowser để quét danh sách Chromecast
-    # listener = ChromecastListener()
-    # browser = CastBrowser(listener)
-    # browser.start_discovery()
-    # time.sleep(5)  # Đợi 5 giây để quét
-    # browser.stop_discovery()
-    # logging.info(f"Devices: {listener.devices}")
-    # # Kiểm tra xem Chromecast có trong danh sách không
-    # if chromecast_ip not in listener.devices.values():
-    #     raise HTTPException(status_code=404, detail="Chromecast not found on network")
 
     # Kết nối Chromecast
     cast = pychromecast.get_chromecast_from_host((chromecast_ip, 8009, chromecast.uuid, None, None))
@@ -76,11 +66,20 @@ async def checkout(chromecast_id: int, db: Session = Depends(get_db)):
 
     # **ADB CONNECT trước khi chạy lệnh**
     adb_connect_command = f"adb connect {chromecast_ip}:5555"
-    adb_run_app_command = f"adb -s {chromecast_ip}:5555 shell monkey -p com.example.netnamcasting -c android.intent.category.LAUNCHER 1"
-
+    adb_list_apps_command = f"adb -s {chromecast_ip}:5555 shell pm list packages -3"
+    
     try:
         subprocess.run(adb_connect_command, shell=True, check=True)
         time.sleep(2)  # Chờ kết nối ADB
+        packages = ['com.netflix.ninja']
+
+        # Xóa cache của tất cả các package
+        for package in packages:
+            adb_clear_cache_command = f"adb -s {chromecast_ip}:5555 shell pm clear {package}"
+            subprocess.run(adb_clear_cache_command, shell=True, check=True)
+
+        # Chạy lại ứng dụng netnamcasting
+        adb_run_app_command = f"adb -s {chromecast_ip}:5555 shell monkey -p com.example.netnamcasting -c android.intent.category.LAUNCHER 1"
         subprocess.run(adb_run_app_command, shell=True, check=True)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"ADB command failed: {e}")
